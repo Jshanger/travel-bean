@@ -934,7 +934,7 @@ export default function JournalScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.premiumTestingTitle}>Testing premium features</Text>
           <Text style={styles.premiumTestingText}>
-            {isPremium ? `Blog publishing tools are on (${subscriptionPlan}).` : 'Turn on blog publishing, HD exports, and watermark-free sharing.'}
+            {isPremium ? `Blog publishing is on (${subscriptionPlan}).` : 'Turn on public blog publishing, HD exports, and watermark-free sharing.'}
           </Text>
         </View>
         <View style={[styles.testingSwitch, isPremium && styles.testingSwitchOn]}>

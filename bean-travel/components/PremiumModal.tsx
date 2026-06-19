@@ -24,31 +24,31 @@ interface Props {
 
 const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   general: {
-    title: 'Travel Bean Premium',
-    subtitle: 'Turn your Beans into a personal travel blog, with sharper exports and no watermark.',
+    title: 'Publish Your Travel Bean Blog',
+    subtitle: 'Turn private Beans into a public travel blog, with shareable links, HD exports, and no watermark.',
   },
   templates: {
-    title: 'Unlock Travel Blog Publishing',
-    subtitle: 'Publish selected Beans as blog posts, keep clean collage exports, and share without the watermark.',
+    title: 'Unlock Blog Publishing',
+    subtitle: 'Create Beans for free, then upgrade when you are ready to publish them as a travel blog.',
   },
   limit: {
     title: "You've used your 5 free Beans this month",
-    subtitle: 'Upgrade for unlimited Beans, public travel blog posts, HD exports, and no watermark.',
+    subtitle: 'Upgrade for unlimited Beans, public blog posts, HD exports, and no watermark.',
   },
   export: {
     title: 'Want HD export with no watermark?',
-    subtitle: 'Upgrade to save sharper Beans and publish memories to your Travel Bean Blog.',
+    subtitle: 'Upgrade to save sharper Beans and publish memories to your Travel Bean Blog when they are ready.',
   },
   quotes: {
-    title: 'Unlock Travel Blog Publishing',
-    subtitle: 'Turn finished Beans into shareable travel stories on your public blog.',
+    title: 'Unlock Blog Publishing',
+    subtitle: 'Turn finished Beans into shareable travel stories on your public Travel Bean Blog.',
   },
 };
 
 const BENEFITS: Array<{ title: string; body: string; icon: keyof typeof Feather.glyphMap }> = [
   { title: 'Unlimited Beans', body: 'Create as many memories as you like.', icon: 'repeat' },
   { title: 'Travel Blog Publishing', body: 'Turn selected Beans into public blog posts.', icon: 'globe' },
-  { title: 'Clean Collage Cards', body: 'Keep simple shareable templates for each memory.', icon: 'layout' },
+  { title: 'Public Share Links', body: 'Share your posts with anyone in a browser.', icon: 'link' },
   { title: 'HD Export', body: 'Save sharper, cleaner memory cards.', icon: 'download-cloud' },
   { title: 'No Watermark', body: 'Share your Beans without the Travel Bean mark.', icon: 'droplet' },
 ];

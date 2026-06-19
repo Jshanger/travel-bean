@@ -153,11 +153,11 @@ export default function HomeScreen() {
             <Feather name={isPremium ? 'check' : 'star'} size={19} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog tools are on.' : 'Turn Beans into a public travel blog.'}</Text>
+            <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog publishing is on.' : 'Publish your Travel Bean Blog.'}</Text>
             <Text style={styles.premiumBody}>
               {isPremium
-                ? 'Blog publishing, HD export, and no watermark are active. Manage Premium Mode to preview the free path.'
-                : 'Unlock unlimited Beans, publish Beans as blog posts, keep HD exports, and remove the watermark.'}
+                ? 'Create blog posts from Beans, share public links, export in HD, and remove the watermark.'
+                : 'Create Beans for free. Upgrade when you are ready to turn them into public blog posts.'}
             </Text>
             {!isPremium && <Text style={styles.freeCounter}>{freeBeansRemaining} free Bean{freeBeansRemaining === 1 ? '' : 's'} left this month</Text>}
           </View>
@@ -170,11 +170,11 @@ export default function HomeScreen() {
       {!isPremium && places.length > 0 && (
         <>
           <View style={styles.benefitsCard}>
-            <Text style={styles.benefitsTitle}>Why go Premium?</Text>
+            <Text style={styles.benefitsTitle}>Premium is for publishing</Text>
             <View style={styles.benefitsGrid}>
               <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Create as many memories as you like." />
               <PremiumBenefit icon="globe" title="Travel Blog" body="Turn selected Beans into public blog posts." />
-              <PremiumBenefit icon="layout" title="Clean Collages" body="Use simple, beautiful templates for share cards." />
+              <PremiumBenefit icon="link" title="Public Links" body="Share your posts with people outside the app." />
               <PremiumBenefit icon="download-cloud" title="HD Export" body="Save sharper, cleaner memory cards." />
               <PremiumBenefit icon="droplet" title="No Watermark" body="Share beautiful Beans without the Travel Bean mark." />
             </View>
