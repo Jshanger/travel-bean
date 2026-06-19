@@ -1,0 +1,15 @@
+modules = ["nodejs-20", "web"]
+run = "pnpm start"
+entrypoint = "package.json"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["sh", "-c", "npx --yes pnpm@10.24.0 install --no-frozen-lockfile && npx --yes pnpm@10.24.0 run build:deploy"]
+run = ["sh", "-c", "node api-server/dist/index.mjs"]
+
+[[ports]]
+localPort = 3001
+externalPort = 80

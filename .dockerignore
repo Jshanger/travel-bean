@@ -1,0 +1,14 @@
+.git
+.DS_Store
+node_modules
+*/node_modules
+api-server/dist
+bean-travel/dist
+bean-travel/.expo
+bean-travel/static-build
+*/.replit-artifact
+travel-bean-deploy-source.zip
+travel-bean-deploy-clean.zip
+.env
+.env.*
+!.env.example

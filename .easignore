@@ -1,0 +1,15 @@
+.git/
+.agents/
+.codex/
+
+**/.DS_Store
+**/.expo/
+**/node_modules/
+**/*.tsbuildinfo
+
+bean-travel/dist/
+bean-travel/static-build/
+bean-travel/web-build/
+bean-travel/.metro-cache/
+
+api-server/dist/

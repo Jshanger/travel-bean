@@ -1,0 +1,54 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true,
+        "image": "latest"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "code-companion-namaikinasaru.replit.app",
+        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://code-companion-namaikinasaru.replit.app/api/__clerk",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZnVubnktb3JjYS0xOS5jbGVyay5hY2NvdW50cy5kZXYk",
+        "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "test_LoNfaGFqhtKqTINDJiBzCaYLJWN",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_EXEtVkZlzsbKjhfAbrmodBnDFHg",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_SyxhmvznkClMuNiwVPlPJLvYlab"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "code-companion-namaikinasaru.replit.app",
+        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://code-companion-namaikinasaru.replit.app/api/__clerk",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZnVubnktb3JjYS0xOS5jbGVyay5hY2NvdW50cy5kZXYk",
+        "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "test_LoNfaGFqhtKqTINDJiBzCaYLJWN",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_EXEtVkZlzsbKjhfAbrmodBnDFHg",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_SyxhmvznkClMuNiwVPlPJLvYlab"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "joshuagabriel@hotmail.com",
+        "appleTeamId": "R3NQJ849KZ",
+        "ascAppId": "6776944866"
+      }
+    }
+  }
+}

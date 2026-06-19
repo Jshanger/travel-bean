@@ -1,0 +1,18 @@
+{
+  "name": "bean-travel-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.24.0",
+  "scripts": {
+    "dev:app": "pnpm --dir bean-travel dev",
+    "typecheck:app": "pnpm --dir bean-travel typecheck",
+    "typecheck:api": "pnpm --dir api-server typecheck",
+    "build:api": "pnpm --dir api-server build",
+    "build:web": "pnpm --dir bean-travel exec expo export --platform web --output-dir dist --clear",
+    "build:deploy": "pnpm run build:web && pnpm run build:api",
+    "db:push": "pnpm --dir lib-db run push",
+    "start": "pnpm --dir api-server start",
+    "test": "pnpm --dir bean-travel test",
+    "check": "pnpm run typecheck:app && pnpm run typecheck:api && pnpm run test && pnpm run build:api"
+  }
+}

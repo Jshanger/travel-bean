@@ -1,0 +1,11 @@
+build:
+  name: Bean iOS Preview Build
+  steps:
+    - eas/checkout
+    - run:
+        name: Install dependencies
+        command: pnpm install --no-frozen-lockfile
+    - eas/prebuild
+    - eas/install_pods
+    - eas/run_fastlane
+    - eas/upload_artifact_ios
