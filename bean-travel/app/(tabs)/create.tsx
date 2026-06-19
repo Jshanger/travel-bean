@@ -25,7 +25,7 @@ import {
   type TravelQuote,
 } from '@/utils/quoteLibrary';
 import {
-  BeanLayout, BeanMood, fallbackPhoto, FREE_PHOTO_LIMIT, isPremiumLayout, type LayoutConfig, LAYOUTS, makeBeanPlace, MOODS, photoLimitForPremium, randomStoryPrompts, SAMPLE_BEANS, STORY_PROMPTS, TravelBeanDraft,
+  ACTIVE_LAYOUTS, BeanLayout, BeanMood, fallbackPhoto, FREE_PHOTO_LIMIT, isPremiumLayout, type LayoutConfig, makeBeanPlace, MOODS, photoLimitForPremium, randomStoryPrompts, SAMPLE_BEANS, STORY_PROMPTS, TravelBeanDraft,
 } from '@/utils/travelBeanMvp';
 import { BeanPhoto, PromptResponse } from '@/types';
 
@@ -187,13 +187,12 @@ export default function CreateScreen() {
     quality: isPremium ? 1 : 0.82,
   }), [isPremium]);
   const selectedPhotoCount = Math.max(photos.length || 1, 1);
-  const freeLayouts = useMemo(() => sortLayoutsForPhotoCount(LAYOUTS.filter(item => item.type === 'free'), selectedPhotoCount), [selectedPhotoCount]);
-  const premiumLayouts = useMemo(() => sortLayoutsForPhotoCount(LAYOUTS.filter(item => item.type === 'premium'), selectedPhotoCount), [selectedPhotoCount]);
+  const freeLayouts = useMemo(() => sortLayoutsForPhotoCount(ACTIVE_LAYOUTS, selectedPhotoCount), [selectedPhotoCount]);
+  const premiumLayouts = useMemo<LayoutConfig[]>(() => [], []);
   const selectedLayoutIsPremium = isPremiumLayout(layout);
   const quotePlacement = useMemo<QuotePlacement>(() => {
-    if (!selectedQuoteText || !selectedLayoutIsPremium) return 'none';
-    return quotePlacementForLayout(layout);
-  }, [layout, selectedLayoutIsPremium, selectedQuoteText]);
+    return 'none';
+  }, []);
   const suggestedQuotes = useMemo(() => suggestQuotesForMood(mood), [mood]);
   const browsedQuotes = useMemo(() => quotesForCategory(quoteCategory), [quoteCategory]);
   const quoteStyleName = quotePlacementLabel(quotePlacement);
@@ -394,11 +393,11 @@ export default function CreateScreen() {
       mood,
       hasWatermark: !isPremium || includeMascotMark,
       exportQuality: isPremium ? 'hd' : 'standard',
-      selectedQuoteText: isPremium && selectedLayoutIsPremium ? selectedQuoteText : null,
-      selectedQuoteAuthor: isPremium && selectedLayoutIsPremium ? selectedQuoteAuthor : null,
-      quoteSourceType: isPremium && selectedLayoutIsPremium ? quoteSourceType : 'none',
-      quotePlacement: isPremium && selectedLayoutIsPremium ? quotePlacement : 'none',
-      isPremiumQuoteStyle: Boolean(isPremium && selectedLayoutIsPremium && selectedQuoteText && quotePlacement !== 'none'),
+      selectedQuoteText: null,
+      selectedQuoteAuthor: null,
+      quoteSourceType: 'none',
+      quotePlacement: 'none',
+      isPremiumQuoteStyle: false,
     };
   }
 
@@ -709,8 +708,8 @@ export default function CreateScreen() {
       {step === 'look' && (
         <View style={styles.card}>
           <View style={styles.layoutSectionHeader}>
-            <Text style={styles.sectionTitle}>Free Layouts</Text>
-            <Text style={styles.layoutSectionSub}>Included with every Bean</Text>
+            <Text style={styles.sectionTitle}>Collage styles</Text>
+            <Text style={styles.layoutSectionSub}>Choose a simple shareable look</Text>
           </View>
           <View style={styles.layoutGrid}>
             {freeLayouts.map(item => (
@@ -730,46 +729,6 @@ export default function CreateScreen() {
               />
             ))}
           </View>
-          <View style={styles.layoutSectionHeader}>
-            <Text style={styles.sectionTitle}>Premium Layouts</Text>
-            <Text style={styles.layoutSectionSub}>Postcard Template Pack</Text>
-          </View>
-          <View style={styles.layoutGrid}>
-            {premiumLayouts.map(item => (
-              <LayoutOption
-                key={item.id}
-                item={item}
-                selected={layout === item.name}
-                locked={!isPremium}
-                photo={heroPhoto}
-                smallPhotos={photos.map(p => p.imageUrl)}
-                place={place}
-                country={country}
-                date={date}
-                fitLabel={layoutFitLabel(item.name, selectedPhotoCount)}
-                recommended={isRecommendedLayout(item.name, selectedPhotoCount)}
-                onPress={() => chooseLayout(item)}
-              />
-            ))}
-          </View>
-          {isPremium && selectedLayoutIsPremium ? (
-            <QuoteStyleCard
-              selectedQuoteText={selectedQuoteText}
-              selectedQuoteAuthor={selectedQuoteAuthor}
-              quoteStyleName={quoteStyleName}
-              onSuggested={() => openQuoteModal('suggested')}
-              onBrowse={() => openQuoteModal('browse')}
-              onCustom={() => openQuoteModal('custom')}
-              onClear={clearQuote}
-            />
-          ) : !isPremium ? (
-            <LockedQuoteStylesCard
-              onPress={() => {
-                setPremiumMode('quotes');
-                setPremiumVisible(true);
-              }}
-            />
-          ) : null}
           <Text style={styles.sectionTitle}>Choose a mood</Text>
           <View style={styles.moodRow}>
             {MOODS.map(item => (
@@ -812,21 +771,11 @@ export default function CreateScreen() {
               photos={photos.map(p => p.imageUrl)}
               hasWatermark={!isPremium || includeMascotMark}
               exportQuality={isPremium ? 'hd' : 'standard'}
-              selectedQuoteText={isPremium && selectedLayoutIsPremium ? selectedQuoteText : null}
-              selectedQuoteAuthor={isPremium && selectedLayoutIsPremium ? selectedQuoteAuthor : null}
-              quotePlacement={isPremium && selectedLayoutIsPremium ? quotePlacement : 'none'}
+              selectedQuoteText={null}
+              selectedQuoteAuthor={null}
+              quotePlacement="none"
             />
           </ViewShot>
-          {isPremium && selectedLayoutIsPremium && selectedQuoteText ? (
-            <View style={styles.resultQuoteCard}>
-              <View style={styles.resultQuoteIcon}><QuoteSparkIcon /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.resultQuoteKicker}>{quoteStyleName}</Text>
-                <Text style={styles.resultQuoteText} numberOfLines={3}>{selectedQuoteText}</Text>
-                {selectedQuoteAuthor ? <Text style={styles.resultQuoteAuthor}>{selectedQuoteAuthor}</Text> : null}
-              </View>
-            </View>
-          ) : null}
           {isPremium ? (
             <TouchableOpacity style={[styles.mascotMarkToggle, includeMascotMark && styles.mascotMarkToggleActive]} onPress={() => setIncludeMascotMark(value => !value)} activeOpacity={0.86}>
               <TemplateBeanMascotMark layout={layout} size={48} />
@@ -838,9 +787,6 @@ export default function CreateScreen() {
             </TouchableOpacity>
           ) : null}
           <View style={styles.actionGrid}>
-            {isPremium && selectedLayoutIsPremium ? (
-              <TouchableOpacity style={styles.actionButton} onPress={() => openQuoteModal('suggested')}><QuoteSparkIcon compact /><Text style={styles.actionText}>Change Quote</Text></TouchableOpacity>
-            ) : null}
             <TouchableOpacity style={styles.actionButton} onPress={() => setResultEditVisible(true)}><Feather name="edit-3" size={17} color={INK} /><Text style={styles.actionText}>Edit Bean</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, styles.saveAction]} onPress={saveResultBean} disabled={saving}><Feather name="save" size={17} color="#fff" /><Text style={styles.saveActionText}>{saving ? 'Saving...' : 'Save & View'}</Text></TouchableOpacity>
           </View>
@@ -1111,19 +1057,6 @@ function ResultEditModal({
               </View>
             </View>
 
-            {isPremium && selectedLayoutIsPremium ? (
-              <QuoteStyleCard
-                selectedQuoteText={selectedQuoteText}
-                selectedQuoteAuthor={selectedQuoteAuthor}
-                quoteStyleName={quoteStyleName}
-                onSuggested={onSuggestedQuote}
-                onBrowse={onBrowseQuotes}
-                onCustom={onCustomQuote}
-                onClear={onClearQuote}
-              />
-            ) : !isPremium ? (
-              <LockedQuoteStylesCard onPress={onSuggestedQuote} />
-            ) : null}
           </ScrollView>
 
           <TouchableOpacity style={styles.editDoneButton} onPress={onClose} activeOpacity={0.86}>

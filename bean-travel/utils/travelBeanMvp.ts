@@ -186,6 +186,9 @@ export const LAYOUTS: LayoutConfig[] = [
   { id: 'pinned-snapshot', name: 'Pinned Snapshot', type: 'premium', description: 'A polished instant-photo keepsake pinned over a full-photo backdrop.', isLocked: true },
 ];
 
+export const ACTIVE_LAYOUT_NAMES: BeanLayout[] = ['Polaroid Stack', 'Editorial Grid', 'Classic Postcard'];
+export const ACTIVE_LAYOUTS = LAYOUTS.filter(layout => ACTIVE_LAYOUT_NAMES.includes(layout.name));
+
 export const MOODS: BeanMood[] = ['Cozy', 'Playful', 'Dreamy', 'Minimal'];
 
 export function isPremiumLayout(layout?: BeanLayout | string) {

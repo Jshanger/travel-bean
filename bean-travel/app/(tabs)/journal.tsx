@@ -17,7 +17,7 @@ import { BeanPhoto, PromptResponse, VisitedPlace } from '@/types';
 import { persistBeanPhotos } from '@/utils/photoPersistence';
 import { blogPath } from '@/utils/travelBlog';
 import {
-  allBeans, BeanLayout, BeanMood, beanTitle, formatDate, isPremiumLayout, journalMemoryText, LAYOUTS, memoryResponses, MOODS, photoLimitForPremium, primaryPhoto, serializeJournalNotes, STORY_PROMPTS,
+  ACTIVE_LAYOUTS, allBeans, BeanLayout, BeanMood, beanTitle, formatDate, isPremiumLayout, journalMemoryText, LAYOUTS, memoryResponses, MOODS, photoLimitForPremium, primaryPhoto, serializeJournalNotes, STORY_PROMPTS,
 } from '@/utils/travelBeanMvp';
 import { TRAVEL_QUOTES, type QuotePlacement, type QuoteSourceType, type TravelQuote } from '@/utils/quoteLibrary';
 
@@ -214,7 +214,7 @@ export default function JournalScreen() {
       const mood = normalizeMood(editForm.mood);
       const selectedQuoteText = editForm.selectedQuoteText.trim();
       const selectedQuoteAuthor = editForm.selectedQuoteAuthor.trim();
-      const canUseQuote = isPremium && isPremiumLayout(layout) && selectedQuoteText.length > 0;
+      const canUseQuote = false;
       const persistedPhotos = await persistBeanPhotos(editForm.photos);
       await editPlace(selectedBean.id, {
         name: editForm.name,
@@ -507,9 +507,9 @@ export default function JournalScreen() {
                       layout={savedLayout}
                       hasWatermark={selectedBean.hasWatermark ?? !isPremium}
                       exportQuality={isPremium ? 'hd' : 'standard'}
-                      selectedQuoteText={selectedBean.selectedQuoteText}
-                      selectedQuoteAuthor={selectedBean.selectedQuoteAuthor}
-                      quotePlacement={selectedBean.quotePlacement}
+                      selectedQuoteText={null}
+                      selectedQuoteAuthor={null}
+                      quotePlacement="none"
                     />
                   </ViewShot>
                 </TouchableOpacity>
@@ -607,9 +607,9 @@ export default function JournalScreen() {
                   layout={editForm.layout}
                   hasWatermark={!isPremium}
                   exportQuality={isPremium ? 'hd' : 'standard'}
-                  selectedQuoteText={isPremium && isPremiumLayout(editForm.layout) ? editForm.selectedQuoteText : null}
-                  selectedQuoteAuthor={isPremium && isPremiumLayout(editForm.layout) ? editForm.selectedQuoteAuthor : null}
-                  quotePlacement={isPremium && isPremiumLayout(editForm.layout) ? quotePlacementForLayout(editForm.layout) : 'none'}
+                  selectedQuoteText={null}
+                  selectedQuoteAuthor={null}
+                  quotePlacement="none"
                 />
               </View>
 
@@ -747,7 +747,7 @@ export default function JournalScreen() {
 
             <Text style={styles.label}>Collage style</Text>
             <View style={styles.editLayoutGrid}>
-              {LAYOUTS.map(item => {
+              {ACTIVE_LAYOUTS.map(item => {
                 const locked = item.type === 'premium' && !isPremium;
                 const selected = editForm.layout === item.name;
                 return (
@@ -763,99 +763,6 @@ export default function JournalScreen() {
                 );
               })}
             </View>
-
-            {isPremium && isPremiumLayout(editForm.layout) ? (
-              <>
-                <Text style={styles.label}>Premium quote</Text>
-                <TouchableOpacity
-                  disabled={readOnly}
-                  style={styles.quoteDropdownButton}
-                  onPress={() => setQuoteDropdownOpen(open => !open)}
-                  activeOpacity={0.86}
-                >
-                  <Feather name="book-open" size={16} color={ORANGE} />
-                  <Text style={styles.quoteDropdownText}>{editForm.selectedQuoteText.trim() ? 'Change saved quote' : 'Browse saved quotes'}</Text>
-                  <Feather name={quoteDropdownOpen ? 'chevron-up' : 'chevron-down'} size={18} color={MUTED} />
-                </TouchableOpacity>
-                {quoteDropdownOpen ? (
-                  <View style={styles.quoteDropdownPanel}>
-                    <View style={styles.quoteSearchRow}>
-                      <Feather name="search" size={17} color={MUTED} />
-                      <TextInput
-                        editable={!readOnly}
-                        value={quoteSearch}
-                        onChangeText={setQuoteSearch}
-                        placeholder="Search by words, author, or mood"
-                        placeholderTextColor="#A98B7A"
-                        style={styles.quoteSearchInput}
-                      />
-                      {quoteSearch.trim() ? (
-                        <TouchableOpacity
-                          accessibilityLabel="Clear quote search"
-                          onPress={() => setQuoteSearch('')}
-                          style={styles.quoteSearchClear}
-                          activeOpacity={0.84}
-                        >
-                          <Feather name="x" size={15} color={MUTED} />
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                    <View style={styles.journalQuoteResults}>
-                      {quoteMatches.map(quote => {
-                        const selected = editForm.selectedQuoteText.trim() === quote.text;
-                        return (
-                          <TouchableOpacity
-                            key={quote.id}
-                            disabled={readOnly}
-                            style={[styles.journalQuoteCard, selected && styles.journalQuoteCardActive]}
-                            onPress={() => selectJournalQuote(quote)}
-                            activeOpacity={0.86}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.journalQuoteText} numberOfLines={2}>{quote.text}</Text>
-                              <Text style={styles.journalQuoteAuthor} numberOfLines={1}>{quote.author}</Text>
-                            </View>
-                            <View style={[styles.journalQuoteUseButton, selected && styles.journalQuoteUseButtonActive]}>
-                              <Text style={[styles.journalQuoteUseText, selected && styles.journalQuoteUseTextActive]}>{selected ? 'Used' : 'Use'}</Text>
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })}
-                      {quoteMatches.length === 0 ? (
-                        <Text style={styles.quoteEmptySearch}>No saved quotes match that search.</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                ) : null}
-                <TextInput
-                  editable={!readOnly}
-                  value={editForm.selectedQuoteText}
-                  onChangeText={selectedQuoteText => setEditForm(prev => ({ ...prev, selectedQuoteText, quoteSourceType: selectedQuoteText.trim() ? 'premium_custom' : 'none' }))}
-                  maxLength={180}
-                  multiline
-                  scrollEnabled={false}
-                  placeholder="Optional quote for this premium collage"
-                  placeholderTextColor="#A98B7A"
-                  style={[styles.input, styles.quoteInput]}
-                />
-                <TextInput
-                  editable={!readOnly && Boolean(editForm.selectedQuoteText.trim())}
-                  value={editForm.selectedQuoteAuthor}
-                  onChangeText={selectedQuoteAuthor => setEditForm(prev => ({ ...prev, selectedQuoteAuthor }))}
-                  placeholder="Author"
-                  placeholderTextColor="#A98B7A"
-                  style={styles.input}
-                />
-                <TouchableOpacity
-                  style={styles.clearQuoteButton}
-                  onPress={() => setEditForm(prev => ({ ...prev, selectedQuoteText: '', selectedQuoteAuthor: '', quoteSourceType: 'none' }))}
-                  activeOpacity={0.86}
-                >
-                  <Feather name="slash" size={15} color={ORANGE} />
-                  <Text style={styles.clearQuoteText}>No Quote</Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
 
             {memories.length > 0 && (
               <View style={styles.memoryBox}>

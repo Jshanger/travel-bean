@@ -80,7 +80,7 @@ function TemplatePhoto({
   uri,
   style,
   imageStyle,
-  contentPosition = 'top center',
+  contentPosition = 'center',
   contentFit = 'cover',
 }: {
   uri: string;
@@ -1454,7 +1454,7 @@ function variantFromFrameStyle(frameStyle?: StyleProp<ViewStyle>) {
 }
 
 function contentPositionForVariant(variant: string): ImageContentPosition {
-  return variant === 'gallery' ? 'center' : 'top center';
+  return 'center';
 }
 
 function normalizeLayout(layout?: BeanLayout | string): BeanLayout | string {

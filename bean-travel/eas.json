@@ -19,8 +19,8 @@
         "image": "latest"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "code-companion-namaikinasaru.replit.app",
-        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://code-companion-namaikinasaru.replit.app/api/__clerk",
+        "EXPO_PUBLIC_DOMAIN": "travel-bean-production.up.railway.app",
+        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://travel-bean-production.up.railway.app/api/__clerk",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZnVubnktb3JjYS0xOS5jbGVyay5hY2NvdW50cy5kZXYk",
         "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "test_LoNfaGFqhtKqTINDJiBzCaYLJWN",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_EXEtVkZlzsbKjhfAbrmodBnDFHg",
@@ -33,8 +33,8 @@
         "image": "latest"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "code-companion-namaikinasaru.replit.app",
-        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://code-companion-namaikinasaru.replit.app/api/__clerk",
+        "EXPO_PUBLIC_DOMAIN": "travel-bean-production.up.railway.app",
+        "EXPO_PUBLIC_CLERK_PROXY_URL": "https://travel-bean-production.up.railway.app/api/__clerk",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZnVubnktb3JjYS0xOS5jbGVyay5hY2NvdW50cy5kZXYk",
         "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY": "test_LoNfaGFqhtKqTINDJiBzCaYLJWN",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_EXEtVkZlzsbKjhfAbrmodBnDFHg",
