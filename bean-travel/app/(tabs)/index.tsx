@@ -11,6 +11,7 @@ import PremiumModal from '@/components/PremiumModal';
 import { lookupCoords } from '@/constants/cityCoords';
 import { useApp } from '@/context/AppContext';
 import { VisitedPlace } from '@/types';
+import { blogPath } from '@/utils/travelBlog';
 import { allBeans, beanTitle, formatDate, isUnfinishedBeanDraft, primaryPhoto, SAMPLE_BEANS } from '@/utils/travelBeanMvp';
 
 const INK = '#2A1714';
@@ -23,7 +24,7 @@ const BORDER = '#F1D7C5';
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { places, blogPosts, isPremium, canCreateBean, freeBeansRemaining } = useApp();
+  const { places, blogPosts, blogSettings, isPremium, canCreateBean, freeBeansRemaining } = useApp();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [premiumMode, setPremiumMode] = useState<'general' | 'limit'>('general');
   const beans = allBeans(places);
@@ -56,6 +57,11 @@ export default function HomeScreen() {
     } as any);
   }
 
+  function openTravelBlog() {
+    const path = blogPath(blogSettings);
+    router.push((path || '/blog/settings') as any);
+  }
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: top + 14, paddingBottom: bottom }} showsVerticalScrollIndicator={false}>
       <View style={styles.phoneShell}>
@@ -67,6 +73,10 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.primaryButton} onPress={startBean} activeOpacity={0.86}>
           <Feather name="plus" size={32} color="#fff" />
           <Text style={styles.primaryText}>Create a Bean</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.blogButton} onPress={openTravelBlog} activeOpacity={0.86}>
+          <Feather name="globe" size={21} color={ORANGE} />
+          <Text style={styles.blogButtonText}>My Travel Blog</Text>
         </TouchableOpacity>
         <View style={[styles.sparkle, styles.sparkleLeft]} />
         <View style={[styles.sparkle, styles.sparkleRight]} />
@@ -201,6 +211,16 @@ export default function HomeScreen() {
         </View>
         <Feather name="chevron-right" size={26} color={MUTED} />
       </TouchableOpacity>
+      <TouchableOpacity style={styles.blogHomeCard} onPress={openTravelBlog} activeOpacity={0.86}>
+        <View style={styles.blogHomeIcon}>
+          <Feather name="globe" size={24} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.blogHomeTitle}>Your Travel Blog</Text>
+          <Text style={styles.blogHomeText}>Turn selected Beans into public stories people can open in a browser.</Text>
+        </View>
+        <Feather name="arrow-up-right" size={22} color={ORANGE} />
+      </TouchableOpacity>
       </View>
       <PremiumModal visible={premiumVisible} mode={premiumMode} onClose={() => setPremiumVisible(false)} />
     </ScrollView>
@@ -275,7 +295,7 @@ const styles = StyleSheet.create({
   phoneShell: { width: '100%', maxWidth: 520, alignSelf: 'center' },
   iconButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   noticeDot: { position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 5, backgroundColor: ORANGE },
-  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 610, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16 },
+  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 676, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16 },
   heroKicker: { color: '#874716', fontSize: 20, fontFamily: 'Inter_500Medium', marginBottom: 10, textAlign: 'center' },
   heroTitle: { color: INK, fontSize: 39, lineHeight: 45, fontFamily: 'Inter_700Bold', marginBottom: 16, textAlign: 'center', maxWidth: 440 },
   heroSub: { color: MUTED, fontSize: 20, lineHeight: 28, fontFamily: 'Inter_500Medium', marginBottom: 18, textAlign: 'center', maxWidth: 430 },
@@ -283,6 +303,8 @@ const styles = StyleSheet.create({
   heroDecor: { position: 'absolute', left: 0, top: 0 },
   primaryButton: { alignSelf: 'center', width: '100%', maxWidth: 438, height: 78, borderRadius: 39, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingHorizontal: 22, marginTop: 16, shadowColor: '#D8491E', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.18, shadowRadius: 22, elevation: 6 },
   primaryText: { color: '#fff', fontSize: 25, fontFamily: 'Inter_700Bold' },
+  blogButton: { alignSelf: 'center', width: '100%', maxWidth: 438, minHeight: 58, borderRadius: 29, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 18, marginTop: 12 },
+  blogButtonText: { color: INK, fontSize: 17, fontFamily: 'Inter_700Bold' },
   sparkle: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: '#F4B66F' },
   sparkleLeft: { left: 64, top: 362 },
   sparkleRight: { right: 54, top: 432 },
@@ -345,4 +367,8 @@ const styles = StyleSheet.create({
   journalStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   journalStat: { overflow: 'hidden', borderRadius: 11, backgroundColor: '#FFF1E6', color: ORANGE, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontFamily: 'Inter_700Bold' },
   orangeText: { color: ORANGE, fontFamily: 'Inter_700Bold' },
+  blogHomeCard: { marginHorizontal: 20, marginTop: 14, marginBottom: 4, minHeight: 92, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#F4C1A4', backgroundColor: '#FFF1E6', flexDirection: 'row', alignItems: 'center', gap: 14 },
+  blogHomeIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
+  blogHomeTitle: { color: INK, fontSize: 19, fontFamily: 'Inter_700Bold' },
+  blogHomeText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 4 },
 });
