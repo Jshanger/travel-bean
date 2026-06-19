@@ -15,6 +15,7 @@ import PremiumModal from '@/components/PremiumModal';
 import { useApp } from '@/context/AppContext';
 import { BeanPhoto, PromptResponse, VisitedPlace } from '@/types';
 import { persistBeanPhotos } from '@/utils/photoPersistence';
+import { blogPath } from '@/utils/travelBlog';
 import {
   allBeans, BeanLayout, BeanMood, beanTitle, formatDate, isPremiumLayout, journalMemoryText, LAYOUTS, memoryResponses, MOODS, photoLimitForPremium, primaryPhoto, serializeJournalNotes, STORY_PROMPTS,
 } from '@/utils/travelBeanMvp';
@@ -184,6 +185,11 @@ export default function JournalScreen() {
     setSelectedId(null);
     setDetailReturnTarget('journal');
     router.replace('/(tabs)');
+  }
+
+  function openTravelBlog() {
+    const path = blogPath(blogSettings);
+    router.push((path || '/blog/settings') as any);
   }
 
   async function togglePremiumTesting() {
@@ -913,10 +919,10 @@ export default function JournalScreen() {
               <Feather name="book-open" size={13} color="#FFE7D6" />
               <Text style={styles.shelfStatText}>{beans.length} saved</Text>
             </View>
-            <View style={styles.shelfStatPill}>
-              <Feather name="image" size={13} color="#FFE7D6" />
-              <Text style={styles.shelfStatText}>Large previews</Text>
-            </View>
+            <TouchableOpacity style={styles.shelfStatPill} onPress={openTravelBlog} activeOpacity={0.84}>
+              <Feather name="globe" size={13} color="#FFE7D6" />
+              <Text style={styles.shelfStatText}>Travel Blog</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -928,7 +934,7 @@ export default function JournalScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.premiumTestingTitle}>Testing premium features</Text>
           <Text style={styles.premiumTestingText}>
-            {isPremium ? `All premium tools are on (${subscriptionPlan}).` : 'Turn on templates, HD exports, quotes, and premium styles.'}
+            {isPremium ? `Blog publishing tools are on (${subscriptionPlan}).` : 'Turn on blog publishing, HD exports, and watermark-free sharing.'}
           </Text>
         </View>
         <View style={[styles.testingSwitch, isPremium && styles.testingSwitchOn]}>
