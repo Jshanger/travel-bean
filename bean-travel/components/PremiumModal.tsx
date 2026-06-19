@@ -25,30 +25,30 @@ interface Props {
 const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   general: {
     title: 'Travel Bean Premium',
-    subtitle: 'Make your travel memories more beautiful.',
+    subtitle: 'Turn your Beans into a personal travel blog, with sharper exports and no watermark.',
   },
   templates: {
-    title: 'Unlock Premium Templates',
-    subtitle: 'Get postcard, scrapbook, and film-style layouts, plus travel quote styles, HD exports, and no watermark.',
+    title: 'Unlock Travel Blog Publishing',
+    subtitle: 'Publish selected Beans as blog posts, keep clean collage exports, and share without the watermark.',
   },
   limit: {
     title: "You've used your 5 free Beans this month",
-    subtitle: 'Upgrade for unlimited Beans, premium templates, travel quote styles, HD exports, and no watermark.',
+    subtitle: 'Upgrade for unlimited Beans, public travel blog posts, HD exports, and no watermark.',
   },
   export: {
     title: 'Want HD export with no watermark?',
-    subtitle: 'Upgrade to save sharper, cleaner Beans without the Travel Bean mark.',
+    subtitle: 'Upgrade to save sharper Beans and publish memories to your Travel Bean Blog.',
   },
   quotes: {
-    title: 'Unlock Travel Quote Styles',
-    subtitle: 'Add beautiful travel quotes to postcard, scrapbook, and film-style collages with Travel Bean Premium.',
+    title: 'Unlock Travel Blog Publishing',
+    subtitle: 'Turn finished Beans into shareable travel stories on your public blog.',
   },
 };
 
 const BENEFITS: Array<{ title: string; body: string; icon: keyof typeof Feather.glyphMap }> = [
   { title: 'Unlimited Beans', body: 'Create as many memories as you like.', icon: 'repeat' },
-  { title: 'Premium Templates', body: 'Unlock postcard, scrapbook, and film-style layouts.', icon: 'layers' },
-  { title: 'Travel Quote Styles', body: 'Add beautiful travel quotes to your collages.', icon: 'message-circle' },
+  { title: 'Travel Blog Publishing', body: 'Turn selected Beans into public blog posts.', icon: 'globe' },
+  { title: 'Clean Collage Cards', body: 'Keep simple shareable templates for each memory.', icon: 'layout' },
   { title: 'HD Export', body: 'Save sharper, cleaner memory cards.', icon: 'download-cloud' },
   { title: 'No Watermark', body: 'Share your Beans without the Travel Bean mark.', icon: 'droplet' },
 ];

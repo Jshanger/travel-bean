@@ -23,13 +23,14 @@ const BORDER = '#F1D7C5';
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { places, isPremium, canCreateBean, freeBeansRemaining } = useApp();
+  const { places, blogPosts, isPremium, canCreateBean, freeBeansRemaining } = useApp();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [premiumMode, setPremiumMode] = useState<'general' | 'limit'>('general');
   const beans = allBeans(places);
   const mappedBeans = beans.map(enrichHomePlaceCoords).filter(hasCoords);
-  const savedCount = places.length + SAMPLE_BEANS.length;
-  const countries = new Set(beans.map(bean => bean.country)).size;
+  const savedCount = places.length;
+  const countries = new Set(places.map(bean => bean.country).filter(Boolean)).size;
+  const publishedPosts = blogPosts.filter(post => post.status === 'published').length;
   const draft = places.find(isUnfinishedBeanDraft);
   const top = Platform.OS === 'web' ? 56 : insets.top;
   const bottom = Platform.OS === 'web' ? 110 : 110 + insets.bottom;
@@ -60,8 +61,8 @@ export default function HomeScreen() {
       <View style={styles.phoneShell}>
       <View style={styles.heroCard}>
         <Text style={styles.heroKicker}>Hi there!</Text>
-        <Text style={styles.heroTitle}>Ready to turn photos into memories? ✨</Text>
-        <Text style={styles.heroSub}>Add photos. Answer prompts. Create a Bean.</Text>
+        <Text style={styles.heroTitle}>Turn your photos into travel stories.</Text>
+        <Text style={styles.heroSub}>Add photos. Capture a memory. Create a Bean.</Text>
         <HomeHeroVisual />
         <TouchableOpacity style={styles.primaryButton} onPress={startBean} activeOpacity={0.86}>
           <Feather name="plus" size={32} color="#fff" />
@@ -142,11 +143,11 @@ export default function HomeScreen() {
             <Feather name={isPremium ? 'check' : 'star'} size={19} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.premiumTitle}>{isPremium ? 'Premium Mode is on.' : 'Make your Beans even more beautiful.'}</Text>
+            <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog tools are on.' : 'Turn Beans into a public travel blog.'}</Text>
             <Text style={styles.premiumBody}>
               {isPremium
-                ? 'HD export and no watermark are active. Manage Premium Mode to preview the free watermark path.'
-                : 'Unlock unlimited Beans, premium templates, travel quote styles, HD export, and no watermark.'}
+                ? 'Blog publishing, HD export, and no watermark are active. Manage Premium Mode to preview the free path.'
+                : 'Unlock unlimited Beans, publish Beans as blog posts, keep HD exports, and remove the watermark.'}
             </Text>
             {!isPremium && <Text style={styles.freeCounter}>{freeBeansRemaining} free Bean{freeBeansRemaining === 1 ? '' : 's'} left this month</Text>}
           </View>
@@ -162,8 +163,8 @@ export default function HomeScreen() {
             <Text style={styles.benefitsTitle}>Why go Premium?</Text>
             <View style={styles.benefitsGrid}>
               <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Create as many memories as you like." />
-              <PremiumBenefit icon="layers" title="Premium Templates" body="Unlock postcard, scrapbook, and film-style layouts." />
-              <PremiumBenefit icon="message-circle" title="Travel Quote Styles" body="Add beautiful travel quotes to your collages." />
+              <PremiumBenefit icon="globe" title="Travel Blog" body="Turn selected Beans into public blog posts." />
+              <PremiumBenefit icon="layout" title="Clean Collages" body="Use simple, beautiful templates for share cards." />
               <PremiumBenefit icon="download-cloud" title="HD Export" body="Save sharper, cleaner memory cards." />
               <PremiumBenefit icon="droplet" title="No Watermark" body="Share beautiful Beans without the Travel Bean mark." />
             </View>
@@ -176,9 +177,11 @@ export default function HomeScreen() {
         <View style={styles.steps}>
           <Step icon="image" label="Add Photos" />
           <Dash />
-          <Step icon="message-square" label="Tell Story" />
+          <Step icon="message-square" label="Capture Memory" />
           <Dash />
-          <Step icon="star" label="Pick Look" />
+          <Step icon="star" label="Create Bean" />
+          <Dash />
+          <Step icon="globe" label="Publish Blog" />
         </View>
       </View>
 
@@ -189,7 +192,12 @@ export default function HomeScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.sectionTitle}>Your Journal</Text>
-          <Text style={styles.journalText}>You have saved <Text style={styles.orangeText}>{savedCount}</Text> Beans in {countries} countries</Text>
+          <Text style={styles.journalText}>You have created <Text style={styles.orangeText}>{savedCount}</Text> Bean{savedCount === 1 ? '' : 's'} across {countries} countr{countries === 1 ? 'y' : 'ies'}.</Text>
+          <View style={styles.journalStatsRow}>
+            <Text style={styles.journalStat}>{savedCount} Bean{savedCount === 1 ? '' : 's'}</Text>
+            <Text style={styles.journalStat}>{countries} Countr{countries === 1 ? 'y' : 'ies'}</Text>
+            <Text style={styles.journalStat}>{publishedPosts} Blog Post{publishedPosts === 1 ? '' : 's'}</Text>
+          </View>
         </View>
         <Feather name="chevron-right" size={26} color={MUTED} />
       </TouchableOpacity>
@@ -334,5 +342,7 @@ const styles = StyleSheet.create({
   bookIcon: { width: 62, height: 62, borderRadius: 14, backgroundColor: '#D7D0A4', alignItems: 'center', justifyContent: 'center' },
   bookHeart: { position: 'absolute', right: -5, bottom: 5, width: 25, height: 25, borderRadius: 13, backgroundColor: '#FFF7EF', alignItems: 'center', justifyContent: 'center' },
   journalText: { color: MUTED, marginTop: 4, fontSize: 16, lineHeight: 22, fontFamily: 'Inter_500Medium' },
+  journalStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  journalStat: { overflow: 'hidden', borderRadius: 11, backgroundColor: '#FFF1E6', color: ORANGE, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontFamily: 'Inter_700Bold' },
   orangeText: { color: ORANGE, fontFamily: 'Inter_700Bold' },
 });
