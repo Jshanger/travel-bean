@@ -74,10 +74,14 @@ export default function JournalScreen() {
   const [exporting, setExporting] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
   const shotRef = useRef<any>(null);
   const beans = allBeans(places);
   const top = Platform.OS === 'web' ? 56 : insets.top;
   const bottom = Platform.OS === 'web' ? 112 : 112 + insets.bottom;
+  const isWideWeb = Platform.OS === 'web' && windowWidth >= 900;
+  const detailMaxWidth = isWideWeb ? Math.min(1040, windowWidth - 96) : 640;
+  const detailControlMaxWidth = isWideWeb ? detailMaxWidth : 620;
   const selectedBean = selectedId ? beans.find(bean => bean.id === selectedId) : undefined;
   const photoLimit = photoLimitForPremium(isPremium);
   const editPhotoLimit = Math.max(photoLimit, editForm.photos.length);
@@ -445,13 +449,13 @@ export default function JournalScreen() {
       <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={styles.screen}
-          contentContainerStyle={{ paddingTop: top + 14, paddingBottom: bottom + (detailMode === 'edit' ? 180 : 0), paddingHorizontal: 20 }}
+          contentContainerStyle={{ paddingTop: top + 14, paddingBottom: bottom + (detailMode === 'edit' ? 180 : 0), paddingHorizontal: isWideWeb ? 44 : 20 }}
           automaticallyAdjustKeyboardInsets
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.detailHeader}>
+          <View style={[styles.detailHeader, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
             <TouchableOpacity
               accessibilityLabel={detailReturnTarget === 'passport' ? 'Back to Passport' : 'Back to Journal'}
               style={styles.backButton}
@@ -465,7 +469,7 @@ export default function JournalScreen() {
             </View>
           </View>
 
-          <View style={styles.detailExitRow}>
+          <View style={[styles.detailExitRow, { maxWidth: detailControlMaxWidth }]}>
             <TouchableOpacity style={styles.detailExitButton} onPress={goHome} activeOpacity={0.86}>
               <Feather name="home" size={16} color={ORANGE} />
               <Text style={styles.detailExitText}>Home</Text>
@@ -484,7 +488,7 @@ export default function JournalScreen() {
                   onPress={() => openCollageAlbum(entryPhotos.length)}
                   activeOpacity={0.96}
                 >
-                  <ViewShot ref={shotRef} style={styles.collageCapture} options={captureOptions as any}>
+                  <ViewShot ref={shotRef} style={[styles.collageCapture, { maxWidth: detailMaxWidth }]} options={captureOptions as any}>
                     <BeanCollageCard
                       place={selectedBean.name}
                       country={selectedBean.country}
@@ -504,7 +508,7 @@ export default function JournalScreen() {
                   </ViewShot>
                 </TouchableOpacity>
               </View>
-              <View style={styles.detailActions}>
+              <View style={[styles.detailActions, { maxWidth: detailControlMaxWidth }]}>
                 <TouchableOpacity style={styles.detailActionButton} onPress={downloadEntry} disabled={exporting}>
                   <Feather name="download" size={17} color={INK} />
                   <Text style={styles.detailActionText}>{exporting ? 'Working...' : isPremium ? 'Download HD' : 'Download Collage'}</Text>
@@ -519,12 +523,12 @@ export default function JournalScreen() {
                 </TouchableOpacity>
               </View>
               {!readOnly && (
-                <TouchableOpacity style={styles.blogDraftButton} onPress={addEntryToBlog} activeOpacity={0.88}>
+                <TouchableOpacity style={[styles.blogDraftButton, { maxWidth: detailControlMaxWidth }]} onPress={addEntryToBlog} activeOpacity={0.88}>
                   <Feather name="edit" size={17} color="#fff" />
                   <Text style={styles.blogDraftText}>Add to Travel Blog</Text>
                 </TouchableOpacity>
               )}
-              <View style={styles.infoPanel}>
+              <View style={[styles.infoPanel, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
                 <View style={styles.infoHeader}>
                   <Text style={styles.infoTitle}>Saved information</Text>
                   <View style={styles.infoPill}>
@@ -568,7 +572,7 @@ export default function JournalScreen() {
                 )}
               </View>
               {!readOnly && (
-                <TouchableOpacity style={styles.deleteButton} onPress={deleteEntry} activeOpacity={0.86}>
+                <TouchableOpacity style={[styles.deleteButton, isWideWeb && { width: '100%', maxWidth: detailControlMaxWidth, alignSelf: 'center' }]} onPress={deleteEntry} activeOpacity={0.86}>
                   <Feather name="trash-2" size={17} color="#B43324" />
                   <Text style={styles.deleteText}>Delete Entry</Text>
                 </TouchableOpacity>
@@ -576,7 +580,7 @@ export default function JournalScreen() {
             </>
           ) : (
             <>
-              <View style={styles.editorMascotCard}>
+              <View style={[styles.editorMascotCard, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
                 <CreateBeanMascot size={72} frameless bubble="heart" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.editorMascotTitle}>Tune this memory</Text>
@@ -584,7 +588,7 @@ export default function JournalScreen() {
                 </View>
               </View>
 
-              <View style={styles.editorPreviewWrap}>
+              <View style={[styles.editorPreviewWrap, { maxWidth: detailMaxWidth }]}>
                 <BeanCollageCard
                   place={editForm.name}
                   country={editForm.country}
@@ -603,7 +607,7 @@ export default function JournalScreen() {
                 />
               </View>
 
-              <View style={styles.editorCard}>
+              <View style={[styles.editorCard, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
             <View style={styles.formRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Place</Text>
