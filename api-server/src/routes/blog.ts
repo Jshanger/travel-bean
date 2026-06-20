@@ -111,6 +111,40 @@ function publicBlogPhotos(post: typeof blogPosts.$inferSelect, publicOnly = fals
   };
 }
 
+function isEmail(value: unknown): value is string {
+  return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+async function accountEmailForUser(userId: string, fallbackEmail?: string) {
+  const clerkSecret = process.env.CLERK_SECRET_KEY;
+  if (!clerkSecret) return fallbackEmail;
+  try {
+    const response = await fetch(`https://api.clerk.com/v1/users/${encodeURIComponent(userId)}`, {
+      headers: {
+        Authorization: `Bearer ${clerkSecret}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) return fallbackEmail;
+    const user = await response.json() as any;
+    const addresses = Array.isArray(user.email_addresses) ? user.email_addresses : [];
+    const primary = addresses.find((address: any) => address.id === user.primary_email_address_id) ?? addresses[0];
+    return primary?.email_address ?? fallbackEmail;
+  } catch {
+    return fallbackEmail;
+  }
+}
+
+function dashboardEmailBody() {
+  return [
+    "Open your Travel Bean dashboard from your laptop:",
+    "",
+    "https://travelbean.app/dashboard",
+    "",
+    "Log in with the same account you use in the Travel Bean app to edit your blog posts, organise drafts, and publish your travel stories.",
+  ].join("\n");
+}
+
 async function canServePublicPhoto(photoId: string) {
   const posts = await db.select().from(blogPosts).where(and(
     eq(blogPosts.status, "published"),
@@ -211,6 +245,57 @@ router.get("/public/:username/:slug", async (req, res) => {
 });
 
 router.use(requireAuth);
+
+router.post("/email-dashboard-link", async (req, res) => {
+  const userId = (req as any).userId;
+  const requestedEmail = isEmail(req.body?.email) ? req.body.email.trim() : undefined;
+  const email = await accountEmailForUser(userId, requestedEmail);
+  if (!isEmail(email)) {
+    res.status(400).json({ error: "Account email is required" });
+    return;
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: "Email is not configured" });
+    return;
+  }
+
+  const subject = "Edit your Travel Bean Blog on web";
+  const text = dashboardEmailBody();
+  const html = `
+    <p>Open your Travel Bean dashboard from your laptop:</p>
+    <p><a href="https://travelbean.app/dashboard">https://travelbean.app/dashboard</a></p>
+    <p>Log in with the same account you use in the Travel Bean app to edit your blog posts, organise drafts, and publish your travel stories.</p>
+  `;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM ?? "Travel Bean <hello@travelbean.app>",
+        to: email,
+        subject,
+        text,
+        html,
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      req.log.error({ status: response.status, detail }, "dashboard link email send failed");
+      res.status(502).json({ error: "Email send failed" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    req.log.error({ err }, "dashboard link email send error");
+    res.status(502).json({ error: "Email send failed" });
+  }
+});
 
 router.get("/settings", async (req, res) => {
   const userId = (req as any).userId;

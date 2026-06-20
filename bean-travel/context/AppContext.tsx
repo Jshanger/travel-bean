@@ -275,6 +275,7 @@ interface AppContextType {
   unpublishBlogPost: (id: string) => Promise<void>;
   deleteBlogPost: (id: string) => Promise<void>;
   getBlogPostById: (id: string) => BlogPost | undefined;
+  emailDashboardLink: (email?: string) => Promise<void>;
   addItineraryItem: (tripId: string, item: Omit<ItineraryItem, 'id' | 'votes' | 'comments'>) => Promise<void>;
   editItineraryItem: (tripId: string, itemId: string, item: Partial<ItineraryItem>) => Promise<void>;
   deleteItineraryItem: (tripId: string, itemId: string) => Promise<void>;
@@ -766,6 +767,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const getBlogPostById = useCallback((id: string) => blogPosts.find(post => post.id === id), [blogPosts]);
 
+  const emailDashboardLink = useCallback(async (email?: string) => {
+    if (useLocalData) throw new Error('Cloud account is required');
+    const token = await getToken();
+    await blogApiFetch('/email-dashboard-link', token, {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }, [getToken, useLocalData]);
+
   // ── Itinerary ──────────────────────────────────────────────
   const addItineraryItem = useCallback(async (tripId: string, item: Omit<ItineraryItem, 'id' | 'votes' | 'comments'>) => {
     const trip = trips.find(t => t.id === tripId);
@@ -873,7 +883,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addPlace, editPlace, deletePlace,
       addBucketItem, editBucketItem, deleteBucketItem,
       addTrip, editTrip, deleteTrip,
-      saveBlogSettings, createBlogDraftFromPlace, editBlogPost, publishBlogPostById, unpublishBlogPost, deleteBlogPost, getBlogPostById,
+      saveBlogSettings, createBlogDraftFromPlace, editBlogPost, publishBlogPostById, unpublishBlogPost, deleteBlogPost, getBlogPostById, emailDashboardLink,
       addItineraryItem, editItineraryItem, deleteItineraryItem,
       addComment, voteOnItem,
       getTripById, getUniqueCountries,
