@@ -2,10 +2,11 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useApp } from '@/context/AppContext';
 import type { BlogPost, TravelBlogSettings } from '@/types';
-import { blogPath, formatPublicUsername, sanitizeBlogUsername } from '@/utils/travelBlog';
+import { sharePublicLink } from '@/utils/shareLinks';
+import { blogPath, formatPublicUsername, publicBlogUrl, sanitizeBlogUsername } from '@/utils/travelBlog';
 import { formatDate } from '@/utils/travelBeanMvp';
 
 const INK = '#2A1714';
@@ -34,6 +35,26 @@ export default function PublicBlogPost() {
   const activeSettings = usingLocalPost ? blogSettings : remotePost?.settings;
   const passwordRequired = Boolean(post && 'passwordRequired' in post && post.passwordRequired);
   const unlocked = post?.privacy !== 'password' || password === (post.password ?? '') || !passwordRequired;
+
+  async function sharePost() {
+    if (!activeSettings || !post) return;
+    const result = await sharePublicLink({
+      url: publicBlogUrl(activeSettings, post),
+      title: post.title,
+      text: post.subtitle || activeSettings.title,
+    });
+    if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
+  }
+
+  async function shareBlog() {
+    if (!activeSettings) return;
+    const result = await sharePublicLink({
+      url: publicBlogUrl(activeSettings),
+      title: activeSettings.title || 'Travel Bean Blog',
+      text: activeSettings.intro,
+    });
+    if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -81,16 +102,40 @@ export default function PublicBlogPost() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <TouchableOpacity style={styles.brandRow} onPress={() => router.push(blogPath(activeSettings) as any)} activeOpacity={0.86}>
-        <View style={styles.brandDot} />
-        <Text style={styles.brand}>Travel Bean Blog</Text>
-      </TouchableOpacity>
+      <View style={styles.nav}>
+        <TouchableOpacity style={styles.brandRow} onPress={() => router.push(blogPath(activeSettings) as any)} activeOpacity={0.86}>
+          <View style={styles.brandDot} />
+          <Text style={styles.brand}>Travel Bean Blog</Text>
+        </TouchableOpacity>
+        <View style={styles.navActions}>
+          {usingLocalPost ? (
+            <TouchableOpacity style={styles.navButton} onPress={() => router.push({ pathname: '/blog/editor/[id]', params: { id: post.id } } as any)} activeOpacity={0.86}>
+              <Feather name="edit-3" size={14} color={ORANGE} />
+              <Text style={styles.navButtonText}>Edit Post</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.navButton} onPress={() => router.push('/(auth)/sign-in' as any)} activeOpacity={0.86}>
+              <Feather name="log-in" size={14} color={ORANGE} />
+              <Text style={styles.navButtonText}>Owner Login</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.navButton} onPress={shareBlog} activeOpacity={0.86}>
+            <Feather name="globe" size={14} color={ORANGE} />
+            <Text style={styles.navButtonText}>Share Blog</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navButtonPrimary} onPress={sharePost} activeOpacity={0.86}>
+            <Feather name="share-2" size={14} color="#fff" />
+            <Text style={styles.navButtonPrimaryText}>Share Post</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {post.coverImageUrl ? <Image source={{ uri: post.coverImageUrl }} style={styles.cover} contentFit="cover" contentPosition="top center" /> : null}
       <View style={styles.article}>
         <Text style={styles.kicker}>{post.category} · {formatPublicUsername(activeSettings.username)}</Text>
         <Text style={styles.title}>{post.title}</Text>
         <Text style={styles.subtitle}>{post.subtitle}</Text>
+        <Text style={styles.publicUrl}>{publicBlogUrl(activeSettings, post)}</Text>
         <View style={styles.metaRow}>
           <Feather name="map-pin" size={14} color={ORANGE} />
           <Text style={styles.metaText}>{post.hideExactLocation ? post.country : `${post.place}, ${post.country}`}</Text>
@@ -136,14 +181,21 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   missingTitle: { color: INK, fontSize: 24, fontFamily: 'Inter_700Bold', textAlign: 'center' },
   missingText: { color: MUTED, fontSize: 15, lineHeight: 22, fontFamily: 'Inter_500Medium', textAlign: 'center', marginTop: 7 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, marginBottom: 16 },
+  nav: { minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46 },
+  navActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   brandDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: ORANGE },
   brand: { color: INK, fontSize: 18, fontFamily: 'Inter_700Bold' },
+  navButton: { minHeight: 38, borderRadius: 19, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  navButtonText: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold' },
+  navButtonPrimary: { minHeight: 38, borderRadius: 19, backgroundColor: ORANGE, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  navButtonPrimaryText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_700Bold' },
   cover: { width: '100%', aspectRatio: Platform.OS === 'web' ? 2.1 : 1.28, borderRadius: 24, backgroundColor: '#EAD2C2', marginBottom: 18 },
   article: { borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: Platform.OS === 'web' ? 28 : 18 },
   kicker: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold', marginBottom: 8 },
   title: { color: INK, fontSize: Platform.OS === 'web' ? 46 : 34, lineHeight: Platform.OS === 'web' ? 54 : 40, fontFamily: 'Inter_700Bold' },
   subtitle: { color: MUTED, fontSize: 18, lineHeight: 27, fontFamily: 'Inter_500Medium', marginTop: 10 },
+  publicUrl: { color: ORANGE, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 12 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: BORDER },
   metaText: { color: MUTED, fontSize: 13, fontFamily: 'Inter_700Bold', marginRight: 7 },
   body: { color: INK, fontSize: 18, lineHeight: 31, fontFamily: 'Inter_500Medium', marginTop: 22 },

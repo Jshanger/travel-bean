@@ -6,6 +6,7 @@ import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import type { BlogPost, BlogPrivacy } from '@/types';
+import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, generateBlogDraftFromBean, publicBlogUrl } from '@/utils/travelBlog';
 
 const INK = '#2A1714';
@@ -24,6 +25,7 @@ export default function BlogEditorScreen() {
   const [draft, setDraft] = useState<BlogPost | undefined>(post);
   const [saving, setSaving] = useState(false);
   const link = useMemo(() => draft ? publicBlogUrl(blogSettings, draft) : '', [blogSettings, draft]);
+  const blogLink = useMemo(() => publicBlogUrl(blogSettings), [blogSettings]);
 
   useEffect(() => {
     setDraft(post);
@@ -110,6 +112,26 @@ export default function BlogEditorScreen() {
   function openPublicLink() {
     if (!draft || draft.status !== 'published') return;
     router.push(blogPath(blogSettings, draft) as any);
+  }
+
+  async function sharePostLink() {
+    if (!draft || draft.status !== 'published') return;
+    const result = await sharePublicLink({
+      url: publicBlogUrl(blogSettings, draft),
+      title: draft.title,
+      text: draft.subtitle || blogSettings.title,
+    });
+    if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
+  }
+
+  async function shareBlogLink() {
+    if (!blogSettings.username) return;
+    const result = await sharePublicLink({
+      url: publicBlogUrl(blogSettings),
+      title: blogSettings.title || 'Travel Bean Blog',
+      text: blogSettings.intro,
+    });
+    if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
   }
 
   function refreshFromJournal() {
@@ -218,6 +240,7 @@ export default function BlogEditorScreen() {
           <Text style={styles.previewTitle}>{draft.title}</Text>
           <Text style={styles.previewText}>{draft.subtitle}</Text>
           <Text style={styles.previewUrl}>{link || 'Set a username to create your link'}</Text>
+          {blogLink ? <Text style={styles.previewBlogUrl}>Whole blog: {blogLink}</Text> : null}
         </View>
 
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving} activeOpacity={0.88}>
@@ -229,6 +252,14 @@ export default function BlogEditorScreen() {
             <TouchableOpacity style={styles.secondaryButton} onPress={openPublicLink} activeOpacity={0.86}>
               <Feather name="external-link" size={16} color={ORANGE} />
               <Text style={styles.secondaryButtonText}>View Public Post</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={sharePostLink} activeOpacity={0.86}>
+              <Feather name="share-2" size={16} color={ORANGE} />
+              <Text style={styles.secondaryButtonText}>Share Post</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={shareBlogLink} activeOpacity={0.86}>
+              <Feather name="globe" size={16} color={ORANGE} />
+              <Text style={styles.secondaryButtonText}>Share Blog</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryButton} onPress={unpublish} activeOpacity={0.86}>
               <Feather name="eye-off" size={16} color={ORANGE} />
@@ -282,6 +313,7 @@ const styles = StyleSheet.create({
   previewTitle: { color: INK, fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
   previewText: { color: MUTED, fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 4 },
   previewUrl: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold', marginTop: 10 },
+  previewBlogUrl: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 6 },
   saveButton: { marginTop: 18, minHeight: 52, borderRadius: 26, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   saveText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
   publishButton: { marginTop: 10, minHeight: 52, borderRadius: 26, backgroundColor: '#153A46', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
