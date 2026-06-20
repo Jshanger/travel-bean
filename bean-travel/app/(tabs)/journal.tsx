@@ -83,6 +83,7 @@ export default function JournalScreen() {
   const top = Platform.OS === 'web' ? 56 : insets.top;
   const bottom = Platform.OS === 'web' ? 112 : 112 + insets.bottom;
   const isWideWeb = Platform.OS === 'web' && windowWidth >= 900;
+  const shelfIsWide = windowWidth >= 540;
   const detailMaxWidth = isWideWeb ? Math.min(1040, windowWidth - 96) : 640;
   const detailControlMaxWidth = isWideWeb ? detailMaxWidth : 620;
   const selectedBean = selectedId ? beans.find(bean => bean.id === selectedId) : undefined;
@@ -830,25 +831,28 @@ export default function JournalScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.journalMascotCard}>
-        <CreateBeanMascot size={92} frameless bubble="heart" />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.journalMascotTitle}>Your little travel shelf</Text>
-          <Text style={styles.journalMascotText}>Open any Bean to revisit the collage, edit the story, or share the finished card.</Text>
+      <View style={[styles.journalMascotCard, shelfIsWide ? styles.journalMascotCardWide : styles.journalMascotCardStacked]}>
+        <View style={styles.shelfMascotWrap}>
+          <CreateBeanMascot size={shelfIsWide ? 96 : 86} frameless bubble="heart" />
+        </View>
+        <View style={[styles.shelfContent, shelfIsWide ? styles.shelfContentWide : styles.shelfContentStacked]}>
+          <Text style={styles.journalMascotTitle}>Your Travel Shelf</Text>
+          <Text style={styles.journalMascotText}>Open a Bean to edit its story, update the collage, or turn it into a blog post.</Text>
           <View style={styles.shelfStatsRow}>
             <View style={styles.shelfStatPill}>
               <Feather name="book-open" size={13} color="#FFE7D6" />
-              <Text style={styles.shelfStatText}>{beans.length} saved</Text>
+              <Text style={styles.shelfStatText}>{beans.length} Beans saved</Text>
             </View>
-            <TouchableOpacity style={styles.shelfStatPill} onPress={openTravelBlog} activeOpacity={0.84}>
-              <Feather name="globe" size={13} color="#FFE7D6" />
-              <Text style={styles.shelfStatText}>Your Travel Blog</Text>
+            <TouchableOpacity style={styles.shelfBlogAction} onPress={openTravelBlog} activeOpacity={0.84}>
+              <Feather name="globe" size={13} color="#153A46" />
+              <Text style={styles.shelfBlogActionText}>Open Travel Blog</Text>
+              <Feather name="arrow-right" size={13} color="#153A46" />
             </TouchableOpacity>
           </View>
-          <View style={styles.webShelfPanel}>
+          <View style={[styles.webShelfPanel, shelfIsWide && styles.webShelfPanelWide]}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.webShelfTitle}>Manage blog on web</Text>
-              <Text style={styles.webShelfText}>Edit posts, organise drafts, and publish from a larger screen.</Text>
+              <Text style={styles.webShelfTitle}>Edit blog on web</Text>
+              <Text style={styles.webShelfText}>Send yourself a link to manage posts, drafts, and publishing from your laptop.</Text>
             </View>
             <TouchableOpacity
               style={[styles.webShelfButton, emailingDashboardLink && styles.webShelfButtonDisabled]}
@@ -861,7 +865,7 @@ export default function JournalScreen() {
               ) : (
                 <>
                   <Feather name="mail" size={14} color="#153A46" />
-                  <Text style={styles.webShelfButtonText}>Email me the link</Text>
+                  <Text style={styles.webShelfButtonText}>Email web link</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -1098,13 +1102,22 @@ const styles = StyleSheet.create({
   title: { color: INK, fontSize: 28, fontFamily: 'Inter_700Bold' },
   subtitle: { color: MUTED, fontSize: 13, fontFamily: 'Inter_500Medium', marginTop: 3 },
   iconButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
-  journalMascotCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 26, borderWidth: 1, borderColor: '#2A5D5F', backgroundColor: '#153A46', padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#12313B', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.22, shadowRadius: 28, elevation: 8 },
+  journalMascotCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 26, borderWidth: 1, borderColor: '#2A5D5F', backgroundColor: '#153A46', padding: 18, gap: 16, shadowColor: '#12313B', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.22, shadowRadius: 28, elevation: 8 },
+  journalMascotCardWide: { flexDirection: 'row', alignItems: 'center' },
+  journalMascotCardStacked: { alignItems: 'center' },
+  shelfMascotWrap: { alignItems: 'center', justifyContent: 'center' },
+  shelfContent: { flex: 1 },
+  shelfContentWide: { minWidth: 0 },
+  shelfContentStacked: { width: '100%' },
   journalMascotTitle: { color: '#FFF8EF', fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
   journalMascotText: { color: '#D9EFF7', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 5 },
-  shelfStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 12 },
-  shelfStatPill: { minHeight: 30, borderRadius: 15, backgroundColor: 'rgba(255,248,239,0.14)', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  shelfStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  shelfStatPill: { minHeight: 32, borderRadius: 16, backgroundColor: 'rgba(255,248,239,0.14)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
   shelfStatText: { color: '#FFE7D6', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  webShelfPanel: { marginTop: 12, borderRadius: 18, backgroundColor: 'rgba(255,248,239,0.12)', borderWidth: 1, borderColor: 'rgba(255,231,214,0.18)', padding: 12, gap: 10 },
+  shelfBlogAction: { minHeight: 32, borderRadius: 16, backgroundColor: '#FFE7D6', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  shelfBlogActionText: { color: '#153A46', fontSize: 11, fontFamily: 'Inter_700Bold' },
+  webShelfPanel: { marginTop: 13, borderRadius: 18, backgroundColor: 'rgba(255,248,239,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,231,214,0.22)', padding: 12, gap: 10 },
+  webShelfPanelWide: { flexDirection: 'row', alignItems: 'center' },
   webShelfTitle: { color: '#FFF8EF', fontSize: 14, fontFamily: 'Inter_700Bold' },
   webShelfText: { color: '#D9EFF7', fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', marginTop: 3 },
   webShelfButton: { alignSelf: 'flex-start', minHeight: 36, borderRadius: 18, backgroundColor: '#FFE7D6', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
