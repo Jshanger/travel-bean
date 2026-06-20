@@ -1,9 +1,8 @@
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Ellipse, G, Path } from 'react-native-svg';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
@@ -24,11 +23,9 @@ const BORDER = '#F1D7C5';
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { places, blogPosts, blogSettings, isPremium, canCreateBean, freeBeansRemaining, emailDashboardLink } = useApp();
-  const { user } = useUser();
+  const { places, blogPosts, isPremium, canCreateBean, freeBeansRemaining } = useApp();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [premiumMode, setPremiumMode] = useState<'general' | 'limit'>('general');
-  const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
   const beans = allBeans(places);
   const mappedBeans = beans.map(enrichHomePlaceCoords).filter(hasCoords);
   const savedCount = places.length;
@@ -61,19 +58,6 @@ export default function HomeScreen() {
 
   function openTravelBlog() {
     router.push('/blog' as any);
-  }
-
-  async function sendDashboardLink() {
-    const email = user?.primaryEmailAddress?.emailAddress;
-    setEmailingDashboardLink(true);
-    try {
-      await emailDashboardLink(email);
-      Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
-    } catch {
-      Alert.alert('Email failed', 'Sorry, we couldn’t send the email. Please try again.');
-    } finally {
-      setEmailingDashboardLink(false);
-    }
   }
 
   return (
@@ -225,42 +209,6 @@ export default function HomeScreen() {
         </View>
         <Feather name="chevron-right" size={26} color={MUTED} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.blogHomeCard} onPress={openTravelBlog} activeOpacity={0.86}>
-        <View style={styles.blogHomeIcon}>
-          <Feather name="globe" size={24} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.blogHomeTitle}>Your Travel Blog</Text>
-          <Text style={styles.blogHomeText}>Turn selected Beans into public stories people can open in a browser.</Text>
-        </View>
-        <Feather name="arrow-up-right" size={22} color={ORANGE} />
-      </TouchableOpacity>
-      <View style={styles.webDashboardCard}>
-        <View style={styles.webDashboardHeader}>
-          <View style={styles.webDashboardIcon}>
-            <Feather name="monitor" size={23} color={ORANGE} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.webDashboardTitle}>Manage blog on web</Text>
-            <Text style={styles.webDashboardText}>Edit your blog posts, organise drafts, and publish your Travel Bean Blog from a larger screen.</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[styles.emailLinkButton, emailingDashboardLink && styles.emailLinkButtonDisabled]}
-          onPress={sendDashboardLink}
-          activeOpacity={0.86}
-          disabled={emailingDashboardLink}
-        >
-          {emailingDashboardLink ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Feather name="mail" size={18} color="#fff" />
-              <Text style={styles.emailLinkButtonText}>Email me the link</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
       </View>
       <PremiumModal visible={premiumVisible} mode={premiumMode} onClose={() => setPremiumVisible(false)} />
     </ScrollView>
@@ -407,16 +355,4 @@ const styles = StyleSheet.create({
   journalStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   journalStat: { overflow: 'hidden', borderRadius: 11, backgroundColor: '#FFF1E6', color: ORANGE, paddingHorizontal: 8, paddingVertical: 4, fontSize: 10, fontFamily: 'Inter_700Bold' },
   orangeText: { color: ORANGE, fontFamily: 'Inter_700Bold' },
-  blogHomeCard: { marginHorizontal: 20, marginTop: 14, marginBottom: 4, minHeight: 92, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#F4C1A4', backgroundColor: '#FFF1E6', flexDirection: 'row', alignItems: 'center', gap: 14 },
-  blogHomeIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' },
-  blogHomeTitle: { color: INK, fontSize: 19, fontFamily: 'Inter_700Bold' },
-  blogHomeText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 4 },
-  webDashboardCard: { marginHorizontal: 20, marginTop: 14, marginBottom: 4, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, gap: 14 },
-  webDashboardHeader: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  webDashboardIcon: { width: 50, height: 50, borderRadius: 18, backgroundColor: '#FFF1E6', alignItems: 'center', justifyContent: 'center' },
-  webDashboardTitle: { color: INK, fontSize: 19, fontFamily: 'Inter_700Bold' },
-  webDashboardText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 4 },
-  emailLinkButton: { minHeight: 48, borderRadius: 24, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  emailLinkButtonDisabled: { opacity: 0.72 },
-  emailLinkButtonText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
 });
