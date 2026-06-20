@@ -793,7 +793,7 @@ export default function CreateScreen() {
           {!isPremium && (
             <View style={styles.upgradeBanner}>
               <View style={styles.upgradeIcon}><Feather name="star" size={15} color={ORANGE} /></View>
-              <Text style={styles.upgradeText}>Want HD export with no watermark?</Text>
+              <Text style={styles.upgradeText}>Want HD export and blog publishing?</Text>
               <TouchableOpacity onPress={() => { setPremiumMode('export'); setPremiumVisible(true); }}>
                 <Text style={styles.upgradeLink}>Upgrade</Text>
               </TouchableOpacity>

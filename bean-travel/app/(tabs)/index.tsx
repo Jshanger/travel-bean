@@ -156,7 +156,7 @@ export default function HomeScreen() {
             <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog publishing is on.' : 'Publish your Travel Bean Blog.'}</Text>
             <Text style={styles.premiumBody}>
               {isPremium
-                ? 'Create blog posts from Beans, share public links, export in HD, and remove the watermark.'
+                ? 'Create blog posts from Beans, share public links, and export in HD.'
                 : 'Create Beans for free. Upgrade when you are ready to turn them into public blog posts.'}
             </Text>
             {!isPremium && <Text style={styles.freeCounter}>{freeBeansRemaining} free Bean{freeBeansRemaining === 1 ? '' : 's'} left this month</Text>}
@@ -175,8 +175,8 @@ export default function HomeScreen() {
               <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Create as many memories as you like." />
               <PremiumBenefit icon="globe" title="Travel Blog" body="Turn selected Beans into public blog posts." />
               <PremiumBenefit icon="link" title="Public Links" body="Share your posts with people outside the app." />
+              <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Keep creating memories without the free monthly limit." />
               <PremiumBenefit icon="download-cloud" title="HD Export" body="Save sharper, cleaner memory cards." />
-              <PremiumBenefit icon="droplet" title="No Watermark" body="Share beautiful Beans without the Travel Bean mark." />
             </View>
           </View>
         </>

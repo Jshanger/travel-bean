@@ -25,7 +25,7 @@ interface Props {
 const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   general: {
     title: 'Publish Your Travel Bean Blog',
-    subtitle: 'Turn private Beans into a public travel blog, with shareable links, HD exports, and no watermark.',
+    subtitle: 'Turn private Beans into a public travel blog, with shareable links and HD exports.',
   },
   templates: {
     title: 'Unlock Blog Publishing',
@@ -33,10 +33,10 @@ const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   },
   limit: {
     title: "You've used your 5 free Beans this month",
-    subtitle: 'Upgrade for unlimited Beans, public blog posts, HD exports, and no watermark.',
+    subtitle: 'Upgrade for unlimited Beans, public blog posts, and HD exports.',
   },
   export: {
-    title: 'Want HD export with no watermark?',
+    title: 'Want HD export?',
     subtitle: 'Upgrade to save sharper Beans and publish memories to your Travel Bean Blog when they are ready.',
   },
   quotes: {
@@ -50,7 +50,6 @@ const BENEFITS: Array<{ title: string; body: string; icon: keyof typeof Feather.
   { title: 'Travel Blog Publishing', body: 'Turn selected Beans into public blog posts.', icon: 'globe' },
   { title: 'Public Share Links', body: 'Share your posts with anyone in a browser.', icon: 'link' },
   { title: 'HD Export', body: 'Save sharper, cleaner memory cards.', icon: 'download-cloud' },
-  { title: 'No Watermark', body: 'Share your Beans without the Travel Bean mark.', icon: 'droplet' },
 ];
 
 export default function PremiumModal({ visible, mode = 'general', onClose, onActivated }: Props) {
@@ -106,17 +105,17 @@ export default function PremiumModal({ visible, mode = 'general', onClose, onAct
             <View style={styles.pricingGrid}>
               <PricingCard
                 title="Monthly"
-                price="£3.99"
+                price="£6.99"
                 cadence="/ month"
                 button="Start Monthly"
                 onPress={() => startPlan('monthly')}
               />
               <PricingCard
                 title="Yearly"
-                price="£24.99"
+                price="£49.99"
                 cadence="/ year"
                 badge="Best value"
-                subtext="Save over 45%"
+                subtext="Save over 40%"
                 button="Start Yearly"
                 featured
                 onPress={() => startPlan('yearly')}
