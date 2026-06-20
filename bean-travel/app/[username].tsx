@@ -97,17 +97,6 @@ export default function PublicBlogHome() {
           <Text style={styles.brand}>Travel Bean Blog</Text>
         </View>
         <View style={styles.navActions}>
-          {usingLocalBlog ? (
-            <TouchableOpacity style={styles.navButton} onPress={() => router.push('/blog/settings' as any)} activeOpacity={0.86}>
-              <Feather name="settings" size={14} color={ORANGE} />
-              <Text style={styles.navButtonText}>Blog Settings</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.navButton} onPress={() => router.push('/(auth)/sign-in' as any)} activeOpacity={0.86}>
-              <Feather name="log-in" size={14} color={ORANGE} />
-              <Text style={styles.navButtonText}>Owner Login</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity style={styles.navButtonPrimary} onPress={shareBlog} activeOpacity={0.86}>
             <Feather name="share-2" size={14} color="#fff" />
             <Text style={styles.navButtonPrimaryText}>Share Blog</Text>
@@ -121,7 +110,7 @@ export default function PublicBlogHome() {
         <Text style={styles.publicUrl}>{blogUrl}</Text>
       </View>
 
-      {posts[0] ? <FeaturedPost post={posts[0]} onPress={() => router.push(blogPath(activeSettings, posts[0]) as any)} onShare={() => sharePost(posts[0])} canEdit={usingLocalBlog} onEdit={() => router.push({ pathname: '/blog/editor/[id]', params: { id: posts[0].id } } as any)} /> : (
+      {posts[0] ? <FeaturedPost post={posts[0]} onPress={() => router.push(blogPath(activeSettings, posts[0]) as any)} onShare={() => sharePost(posts[0])} /> : (
         <View style={styles.emptyCard}>
           <Feather name="lock" size={28} color={ORANGE} />
           <Text style={styles.emptyTitle}>No public stories yet</Text>
@@ -134,7 +123,7 @@ export default function PublicBlogHome() {
           <Text style={styles.sectionTitle}>Latest Posts</Text>
           <View style={styles.postGrid}>
             {posts.slice(1).map(post => (
-              <PostCard key={post.id} post={post} onPress={() => router.push(blogPath(activeSettings, post) as any)} onShare={() => sharePost(post)} canEdit={usingLocalBlog} onEdit={() => router.push({ pathname: '/blog/editor/[id]', params: { id: post.id } } as any)} />
+              <PostCard key={post.id} post={post} onPress={() => router.push(blogPath(activeSettings, post) as any)} onShare={() => sharePost(post)} />
             ))}
           </View>
         </>
@@ -152,7 +141,7 @@ export default function PublicBlogHome() {
   );
 }
 
-function FeaturedPost({ post, onPress, onShare, canEdit, onEdit }: { post: BlogPost; onPress: () => void; onShare: () => void; canEdit?: boolean; onEdit: () => void }) {
+function FeaturedPost({ post, onPress, onShare }: { post: BlogPost; onPress: () => void; onShare: () => void }) {
   return (
     <TouchableOpacity style={styles.featured} onPress={onPress} activeOpacity={0.9}>
       {post.coverImageUrl ? <Image source={{ uri: post.coverImageUrl }} style={styles.featuredImage} contentFit="cover" contentPosition="top center" /> : null}
@@ -169,19 +158,13 @@ function FeaturedPost({ post, onPress, onShare, canEdit, onEdit }: { post: BlogP
             <Feather name="share-2" size={14} color={ORANGE} />
             <Text style={styles.actionPillText}>Share Post</Text>
           </TouchableOpacity>
-          {canEdit ? (
-            <TouchableOpacity style={styles.actionPill} onPress={onEdit} activeOpacity={0.86}>
-              <Feather name="edit-3" size={14} color={ORANGE} />
-              <Text style={styles.actionPillText}>Edit</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
       </View>
     </TouchableOpacity>
   );
 }
 
-function PostCard({ post, onPress, onShare, canEdit, onEdit }: { post: BlogPost; onPress: () => void; onShare: () => void; canEdit?: boolean; onEdit: () => void }) {
+function PostCard({ post, onPress, onShare }: { post: BlogPost; onPress: () => void; onShare: () => void }) {
   return (
     <TouchableOpacity style={styles.postCard} onPress={onPress} activeOpacity={0.88}>
       {post.coverImageUrl ? <Image source={{ uri: post.coverImageUrl }} style={styles.postImage} contentFit="cover" contentPosition="top center" /> : null}
@@ -193,11 +176,6 @@ function PostCard({ post, onPress, onShare, canEdit, onEdit }: { post: BlogPost;
           <TouchableOpacity style={styles.iconAction} onPress={onShare} activeOpacity={0.86}>
             <Feather name="share-2" size={14} color={ORANGE} />
           </TouchableOpacity>
-          {canEdit ? (
-            <TouchableOpacity style={styles.iconAction} onPress={onEdit} activeOpacity={0.86}>
-              <Feather name="edit-3" size={14} color={ORANGE} />
-            </TouchableOpacity>
-          ) : null}
         </View>
       </View>
     </TouchableOpacity>

@@ -108,17 +108,6 @@ export default function PublicBlogPost() {
           <Text style={styles.brand}>Travel Bean Blog</Text>
         </TouchableOpacity>
         <View style={styles.navActions}>
-          {usingLocalPost ? (
-            <TouchableOpacity style={styles.navButton} onPress={() => router.push({ pathname: '/blog/editor/[id]', params: { id: post.id } } as any)} activeOpacity={0.86}>
-              <Feather name="edit-3" size={14} color={ORANGE} />
-              <Text style={styles.navButtonText}>Edit Post</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.navButton} onPress={() => router.push('/(auth)/sign-in' as any)} activeOpacity={0.86}>
-              <Feather name="log-in" size={14} color={ORANGE} />
-              <Text style={styles.navButtonText}>Owner Login</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity style={styles.navButton} onPress={shareBlog} activeOpacity={0.86}>
             <Feather name="globe" size={14} color={ORANGE} />
             <Text style={styles.navButtonText}>Share Blog</Text>

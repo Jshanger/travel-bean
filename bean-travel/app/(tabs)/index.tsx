@@ -11,7 +11,6 @@ import PremiumModal from '@/components/PremiumModal';
 import { lookupCoords } from '@/constants/cityCoords';
 import { useApp } from '@/context/AppContext';
 import { VisitedPlace } from '@/types';
-import { blogPath } from '@/utils/travelBlog';
 import { allBeans, beanTitle, formatDate, isUnfinishedBeanDraft, primaryPhoto, SAMPLE_BEANS } from '@/utils/travelBeanMvp';
 
 const INK = '#2A1714';
@@ -58,8 +57,7 @@ export default function HomeScreen() {
   }
 
   function openTravelBlog() {
-    const path = blogPath(blogSettings);
-    router.push((path || '/blog/settings') as any);
+    router.push('/blog' as any);
   }
 
   return (
