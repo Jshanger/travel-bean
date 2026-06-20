@@ -9,7 +9,7 @@ export interface UserPremiumState {
   monthKey: string;
 }
 
-export const MONTHLY_BEAN_LIMIT = 5;
+export const MONTHLY_BEAN_LIMIT = 10;
 
 export function currentMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

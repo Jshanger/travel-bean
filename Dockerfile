@@ -26,4 +26,4 @@ ENV WEB_DIST_DIR=/app/bean-travel/dist
 
 EXPOSE 3001
 
-CMD ["node", "--enable-source-maps", "api-server/dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "api-server/start.mjs"]

@@ -346,13 +346,13 @@ test('Travel Bean Premium keeps the requested free and premium layout split', ()
 test('free Bean monthly limit resets by calendar month', () => {
   const may = normalizePremiumState({
     ...defaultPremiumState(new Date('2026-05-15T12:00:00Z')),
-    beansCreatedThisMonth: 5,
+    beansCreatedThisMonth: 10,
   }, new Date('2026-05-20T12:00:00Z'));
   assert.equal(remainingFreeBeans(may), 0);
 
   const june = normalizePremiumState(may, new Date('2026-06-01T12:00:00Z'));
   assert.equal(june.beansCreatedThisMonth, 0);
-  assert.equal(remainingFreeBeans(june), 5);
+  assert.equal(remainingFreeBeans(june), 10);
 });
 
 test('premium quote library supports mood suggestions and browsing', () => {

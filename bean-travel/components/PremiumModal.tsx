@@ -32,7 +32,7 @@ const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
     subtitle: 'Create Beans for free, then upgrade when you are ready to publish them as a travel blog.',
   },
   limit: {
-    title: "You've used your 5 free Beans this month",
+    title: "You've used your 10 free Beans this month",
     subtitle: 'Upgrade for unlimited Beans, public blog posts, and HD exports.',
   },
   export: {

@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "corepack pnpm --dir lib-db run push && node --enable-source-maps api-server/dist/index.mjs",
+    "startCommand": "node --enable-source-maps api-server/start.mjs",
     "healthcheckPath": "/api/healthz",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
