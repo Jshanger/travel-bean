@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,7 +6,7 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot from 'react-native-view-shot';
 import BeanCollageCard from '@/components/BeanCollageCard';
@@ -47,8 +46,7 @@ export default function JournalScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; entryId?: string; from?: string; returnTo?: string }>();
   const insets = useSafeAreaInsets();
-  const { places, editPlace, deletePlace, isPremium, subscriptionPlan, activatePremiumPlan, deactivatePremiumMode, blogSettings, createBlogDraftFromPlace, emailDashboardLink } = useApp();
-  const { user } = useUser();
+  const { places, editPlace, deletePlace, isPremium, subscriptionPlan, activatePremiumPlan, deactivatePremiumMode, blogSettings, createBlogDraftFromPlace } = useApp();
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailReturnTarget, setDetailReturnTarget] = useState<'journal' | 'passport'>('journal');
@@ -74,7 +72,6 @@ export default function JournalScreen() {
   const [quoteDropdownOpen, setQuoteDropdownOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
@@ -192,19 +189,6 @@ export default function JournalScreen() {
 
   function openTravelBlog() {
     router.push('/blog' as any);
-  }
-
-  async function sendDashboardLink() {
-    const email = user?.primaryEmailAddress?.emailAddress;
-    setEmailingDashboardLink(true);
-    try {
-      await emailDashboardLink(email);
-      Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
-    } catch {
-      Alert.alert('Email failed', 'Sorry, we couldn’t send the email. Please try again.');
-    } finally {
-      setEmailingDashboardLink(false);
-    }
   }
 
   async function togglePremiumTesting() {
@@ -851,27 +835,6 @@ export default function JournalScreen() {
               <Feather name="arrow-right" size={14} color="#153A46" />
             </TouchableOpacity>
           </View>
-          <View style={[styles.webShelfPanel, shelfIsWide && styles.webShelfPanelWide]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.webShelfTitle}>Edit blog on web</Text>
-              <Text style={styles.webShelfText}>Send yourself a link to manage posts, drafts, and publishing from your laptop.</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.webShelfButton, emailingDashboardLink && styles.webShelfButtonDisabled]}
-              onPress={sendDashboardLink}
-              activeOpacity={0.86}
-              disabled={emailingDashboardLink}
-            >
-              {emailingDashboardLink ? (
-                <ActivityIndicator color="#153A46" />
-              ) : (
-                <>
-                  <Feather name="mail" size={14} color="#153A46" />
-                  <Text style={styles.webShelfButtonText}>Email web link</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
 
@@ -1133,13 +1096,6 @@ const styles = StyleSheet.create({
   shelfBlogAction: { minHeight: 42, borderRadius: 21, backgroundColor: '#FFE7D6', paddingLeft: 7, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', shadowColor: '#071D24', shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.14, shadowRadius: 12, elevation: 3 },
   shelfBlogIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
   shelfBlogActionText: { color: '#153A46', fontSize: 13, fontFamily: 'Inter_700Bold' },
-  webShelfPanel: { marginTop: 13, borderRadius: 18, backgroundColor: 'rgba(156,225,208,0.14)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(156,225,208,0.34)', padding: 12, gap: 10 },
-  webShelfPanelWide: { flexDirection: 'row', alignItems: 'center' },
-  webShelfTitle: { color: '#FFF8EF', fontSize: 14, fontFamily: 'Inter_700Bold' },
-  webShelfText: { color: '#D9EFF7', fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', marginTop: 3 },
-  webShelfButton: { alignSelf: 'stretch', minHeight: 42, borderRadius: 21, backgroundColor: '#FFE7D6', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 156 },
-  webShelfButtonDisabled: { opacity: 0.72 },
-  webShelfButtonText: { color: '#153A46', fontSize: 13, fontFamily: 'Inter_700Bold' },
   premiumTestingCard: { marginHorizontal: 16, marginBottom: 14, borderRadius: 20, borderWidth: 1, borderColor: '#F2C3A3', backgroundColor: '#FFF1E6', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   premiumTestingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   premiumTestingTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },

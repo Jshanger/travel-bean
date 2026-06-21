@@ -1,9 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumModal from '@/components/PremiumModal';
 import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
@@ -23,8 +23,10 @@ export default function PrivateBlogHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [premiumVisible, setPremiumVisible] = useState(false);
+  const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
   const { isSignedIn } = useAuth();
-  const { blogSettings, blogPosts, places, createBlogDraftFromPlace } = useApp();
+  const { user } = useUser();
+  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
@@ -50,6 +52,19 @@ export default function PrivateBlogHome() {
       text: post.subtitle || blogSettings.title,
     });
     if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
+  }
+
+  async function sendDashboardLink() {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    setEmailingDashboardLink(true);
+    try {
+      await emailDashboardLink(email);
+      Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
+    } catch {
+      Alert.alert('Email failed', 'Sorry, we couldn’t send the email. Please try again.');
+    } finally {
+      setEmailingDashboardLink(false);
+    }
   }
 
   async function openBeanPipeline(bean: VisitedPlace) {
@@ -117,12 +132,36 @@ export default function PrivateBlogHome() {
             <Feather name="settings" size={16} color={ORANGE} />
             <Text style={styles.secondaryText}>Blog Settings</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.secondaryButton, emailingDashboardLink && styles.disabledButton]}
+            onPress={sendDashboardLink}
+            activeOpacity={0.86}
+            disabled={emailingDashboardLink}
+          >
+            {emailingDashboardLink ? (
+              <ActivityIndicator color={ORANGE} />
+            ) : (
+              <>
+                <Feather name="mail" size={16} color={ORANGE} />
+                <Text style={styles.secondaryText}>Email Web Link</Text>
+              </>
+            )}
+          </TouchableOpacity>
           {blogUrl ? (
             <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(blogPath(blogSettings) as any)} activeOpacity={0.86}>
               <Feather name="external-link" size={16} color={ORANGE} />
               <Text style={styles.secondaryText}>View Public Blog</Text>
             </TouchableOpacity>
           ) : null}
+        </View>
+        <View style={styles.webManageCard}>
+          <View style={styles.webManageIcon}>
+            <Feather name="monitor" size={18} color="#153A46" />
+          </View>
+          <View style={styles.webManageCopy}>
+            <Text style={styles.webManageTitle}>Edit blog on web</Text>
+            <Text style={styles.webManageText}>Send yourself a link to manage posts, drafts, and publishing from your laptop.</Text>
+          </View>
         </View>
       </View>
 
@@ -291,6 +330,12 @@ const styles = StyleSheet.create({
   primaryText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   secondaryButton: { minHeight: 42, borderRadius: 21, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryText: { color: ORANGE, fontSize: 14, fontFamily: 'Inter_700Bold' },
+  disabledButton: { opacity: 0.7 },
+  webManageCard: { marginTop: 14, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: '#F0CBB5', backgroundColor: '#FFF4E9', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  webManageIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#CBEDE1', alignItems: 'center', justifyContent: 'center' },
+  webManageCopy: { flex: 1 },
+  webManageTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
+  webManageText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 3 },
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   statCard: { flexGrow: 1, flexBasis: 150, borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 15 },
   statValue: { color: INK, fontSize: 30, fontFamily: 'Inter_700Bold', marginTop: 7 },
