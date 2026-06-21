@@ -154,8 +154,8 @@ export default function HomeScreen() {
             <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog publishing is on.' : 'Publish your Travel Bean Blog.'}</Text>
             <Text style={styles.premiumBody}>
               {isPremium
-                ? 'Create blog posts from Beans, share public links, and export in HD.'
-                : 'Create Beans for free. Upgrade when you are ready to turn them into public blog posts.'}
+                ? 'Create, edit, and publish blog posts from your saved Beans.'
+                : 'Create Beans for free. Your first 2 blog posts are included, then Premium unlocks unlimited publishing.'}
             </Text>
             {!isPremium && <Text style={styles.freeCounter}>{freeBeansRemaining} free Bean{freeBeansRemaining === 1 ? '' : 's'} left this month</Text>}
           </View>
@@ -170,11 +170,11 @@ export default function HomeScreen() {
           <View style={styles.benefitsCard}>
             <Text style={styles.benefitsTitle}>Premium is for publishing</Text>
             <View style={styles.benefitsGrid}>
-              <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Create as many memories as you like." />
-              <PremiumBenefit icon="globe" title="Travel Blog" body="Turn selected Beans into public blog posts." />
-              <PremiumBenefit icon="link" title="Public Links" body="Share your posts with people outside the app." />
-              <PremiumBenefit icon="repeat" title="Unlimited Beans" body="Keep creating memories without the free monthly limit." />
-              <PremiumBenefit icon="download-cloud" title="HD Export" body="Save sharper, cleaner memory cards." />
+              <PremiumBenefit icon="send" title="Unlimited Blog Posts" body="Publish more than the 2 free Travel Bean blog posts." />
+              <PremiumBenefit icon="edit-3" title="Fully Editable Blog" body="Edit titles, stories, photos, captions, tags, and drafts." />
+              <PremiumBenefit icon="monitor" title="Web Dashboard" body="Manage posts and publishing from a laptop." />
+              <PremiumBenefit icon="globe" title="Public Travel Blog" body="Share a clean blog page people can open in any browser." />
+              <PremiumBenefit icon="lock" title="Publishing Control" body="Keep entries private until you choose to publish." />
             </View>
           </View>
         </>
