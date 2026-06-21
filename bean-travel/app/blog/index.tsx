@@ -24,6 +24,7 @@ export default function PrivateBlogHome() {
   const insets = useSafeAreaInsets();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
+  const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'failed' | 'signin'>('idle');
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink } = useApp();
@@ -55,12 +56,19 @@ export default function PrivateBlogHome() {
   }
 
   async function sendDashboardLink() {
+    setDashboardLinkStatus('idle');
+    if (!isSignedIn) {
+      setDashboardLinkStatus('signin');
+      return;
+    }
     const email = user?.primaryEmailAddress?.emailAddress;
     setEmailingDashboardLink(true);
     try {
       await emailDashboardLink(email);
+      setDashboardLinkStatus('sent');
       Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
     } catch {
+      setDashboardLinkStatus('failed');
       Alert.alert('Email failed', 'Sorry, we couldn’t send the email. Please try again.');
     } finally {
       setEmailingDashboardLink(false);
@@ -161,6 +169,19 @@ export default function PrivateBlogHome() {
           <View style={styles.webManageCopy}>
             <Text style={styles.webManageTitle}>Edit blog on web</Text>
             <Text style={styles.webManageText}>Send yourself a link to manage posts, drafts, and publishing from your laptop.</Text>
+            {dashboardLinkStatus !== 'idle' ? (
+              <Text style={[
+                styles.webManageStatus,
+                dashboardLinkStatus === 'sent' && styles.webManageStatusSent,
+                dashboardLinkStatus === 'failed' && styles.webManageStatusFailed,
+              ]}>
+                {dashboardLinkStatus === 'sent'
+                  ? 'Link sent. Check your email to open Travel Bean on your laptop.'
+                  : dashboardLinkStatus === 'signin'
+                    ? 'Sign in first so Travel Bean knows where to send the link.'
+                    : 'Sorry, we couldn’t send the email. Please try again.'}
+              </Text>
+            ) : null}
           </View>
         </View>
       </View>
@@ -336,6 +357,9 @@ const styles = StyleSheet.create({
   webManageCopy: { flex: 1 },
   webManageTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
   webManageText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 3 },
+  webManageStatus: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', marginTop: 8 },
+  webManageStatusSent: { color: '#287451' },
+  webManageStatusFailed: { color: '#B43324' },
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
   statCard: { flexGrow: 1, flexBasis: 150, borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 15 },
   statValue: { color: INK, fontSize: 30, fontFamily: 'Inter_700Bold', marginTop: 7 },
