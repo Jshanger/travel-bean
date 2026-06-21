@@ -826,17 +826,22 @@ export default function JournalScreen() {
         <View style={[styles.shelfContent, shelfIsWide ? styles.shelfContentWide : styles.shelfContentStacked]}>
           <Text style={styles.journalMascotTitle}>Your Travel Shelf</Text>
           <Text style={styles.journalMascotText}>Open a Bean to edit its story, update the collage, or turn it into a blog post.</Text>
-          <View style={styles.shelfStatsRow}>
-            <TouchableOpacity style={styles.shelfBlogAction} onPress={openTravelBlog} activeOpacity={0.84}>
-              <View style={styles.shelfBlogIcon}>
-                <Feather name="globe" size={14} color="#153A46" />
-              </View>
-              <Text style={styles.shelfBlogActionText}>Edit Travel Blog</Text>
-              <Feather name="arrow-right" size={14} color="#153A46" />
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
+
+      <TouchableOpacity style={styles.blogDashboardCard} onPress={openTravelBlog} activeOpacity={0.86}>
+        <View style={styles.blogDashboardIcon}>
+          <Feather name="globe" size={18} color="#153A46" />
+        </View>
+        <View style={styles.blogDashboardCopy}>
+          <Text style={styles.blogDashboardTitle}>Blog Dashboard</Text>
+          <Text style={styles.blogDashboardText}>Edit drafts, manage public posts, and publish your Travel Bean Blog.</Text>
+        </View>
+        <View style={styles.blogDashboardAction}>
+          <Text style={styles.blogDashboardActionText}>Open</Text>
+          <Feather name="arrow-right" size={15} color="#fff" />
+        </View>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.premiumTestingCard} onPress={togglePremiumTesting} activeOpacity={0.88}>
         <View style={styles.premiumTestingIcon}>
@@ -1090,12 +1095,13 @@ const styles = StyleSheet.create({
   shelfContentStacked: { width: '100%' },
   journalMascotTitle: { color: '#FFF8EF', fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
   journalMascotText: { color: '#D9EFF7', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 5 },
-  shelfStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-  shelfStatPill: { minHeight: 32, borderRadius: 16, backgroundColor: 'rgba(255,248,239,0.14)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  shelfStatText: { color: '#FFE7D6', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  shelfBlogAction: { minHeight: 42, borderRadius: 21, backgroundColor: '#FFE7D6', paddingLeft: 7, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', shadowColor: '#071D24', shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.14, shadowRadius: 12, elevation: 3 },
-  shelfBlogIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
-  shelfBlogActionText: { color: '#153A46', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  blogDashboardCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 20, borderWidth: 1, borderColor: '#B8E5DA', backgroundColor: '#EFFAF5', padding: 13, minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#10515A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 2 },
+  blogDashboardIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
+  blogDashboardCopy: { flex: 1, minWidth: 0 },
+  blogDashboardTitle: { color: INK, fontSize: 16, fontFamily: 'Inter_700Bold' },
+  blogDashboardText: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
+  blogDashboardAction: { minHeight: 38, borderRadius: 19, backgroundColor: '#153A46', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  blogDashboardActionText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
   premiumTestingCard: { marginHorizontal: 16, marginBottom: 14, borderRadius: 20, borderWidth: 1, borderColor: '#F2C3A3', backgroundColor: '#FFF1E6', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   premiumTestingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   premiumTestingTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
