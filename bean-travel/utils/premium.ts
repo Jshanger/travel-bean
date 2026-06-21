@@ -10,6 +10,7 @@ export interface UserPremiumState {
 }
 
 export const MONTHLY_BEAN_LIMIT = 10;
+export const FREE_BLOG_POST_LIMIT = 2;
 
 export function currentMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

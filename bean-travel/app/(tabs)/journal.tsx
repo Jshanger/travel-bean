@@ -13,7 +13,7 @@ import ViewShot from 'react-native-view-shot';
 import BeanCollageCard from '@/components/BeanCollageCard';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
 import PremiumModal from '@/components/PremiumModal';
-import { useApp } from '@/context/AppContext';
+import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
 import { BeanPhoto, PromptResponse, VisitedPlace } from '@/types';
 import { persistBeanPhotos } from '@/utils/photoPersistence';
 import {
@@ -345,6 +345,10 @@ export default function JournalScreen() {
       const draft = await createBlogDraftFromPlace(selectedBean.id);
       router.push({ pathname: '/blog/editor/[id]', params: { id: draft.id } } as any);
     } catch (error: any) {
+      if (error?.name === BLOG_POST_LIMIT_ERROR) {
+        setPremiumVisible(true);
+        return;
+      }
       Alert.alert('Could not create blog draft', error?.message ?? 'Please try again.');
     }
   }
@@ -839,14 +843,12 @@ export default function JournalScreen() {
           <Text style={styles.journalMascotTitle}>Your Travel Shelf</Text>
           <Text style={styles.journalMascotText}>Open a Bean to edit its story, update the collage, or turn it into a blog post.</Text>
           <View style={styles.shelfStatsRow}>
-            <View style={styles.shelfStatPill}>
-              <Feather name="book-open" size={13} color="#FFE7D6" />
-              <Text style={styles.shelfStatText}>{beans.length} Beans saved</Text>
-            </View>
             <TouchableOpacity style={styles.shelfBlogAction} onPress={openTravelBlog} activeOpacity={0.84}>
-              <Feather name="globe" size={13} color="#153A46" />
-              <Text style={styles.shelfBlogActionText}>Open Travel Blog</Text>
-              <Feather name="arrow-right" size={13} color="#153A46" />
+              <View style={styles.shelfBlogIcon}>
+                <Feather name="globe" size={14} color="#153A46" />
+              </View>
+              <Text style={styles.shelfBlogActionText}>Edit Travel Blog</Text>
+              <Feather name="arrow-right" size={14} color="#153A46" />
             </TouchableOpacity>
           </View>
           <View style={[styles.webShelfPanel, shelfIsWide && styles.webShelfPanelWide]}>
@@ -887,6 +889,20 @@ export default function JournalScreen() {
           <View style={[styles.testingKnob, isPremium && styles.testingKnobOn]} />
         </View>
       </TouchableOpacity>
+
+      <View style={styles.beanStatsTile}>
+        <View style={styles.beanStatsIcon}>
+          <Feather name="book-open" size={22} color="#153A46" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.beanStatsNumber}>{beans.length}</Text>
+          <Text style={styles.beanStatsLabel}>Beans saved</Text>
+        </View>
+        <View style={styles.beanStatsBadge}>
+          <Feather name="map-pin" size={13} color="#A44822" />
+          <Text style={styles.beanStatsBadgeText}>{new Set(beans.map(bean => bean.city || bean.country).filter(Boolean)).size || 0} places</Text>
+        </View>
+      </View>
 
       <View style={styles.searchRow}>
         <Feather name="search" size={18} color={MUTED} />
@@ -1114,15 +1130,16 @@ const styles = StyleSheet.create({
   shelfStatsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   shelfStatPill: { minHeight: 32, borderRadius: 16, backgroundColor: 'rgba(255,248,239,0.14)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
   shelfStatText: { color: '#FFE7D6', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  shelfBlogAction: { minHeight: 32, borderRadius: 16, backgroundColor: '#FFE7D6', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  shelfBlogActionText: { color: '#153A46', fontSize: 11, fontFamily: 'Inter_700Bold' },
-  webShelfPanel: { marginTop: 13, borderRadius: 18, backgroundColor: 'rgba(255,248,239,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,231,214,0.22)', padding: 12, gap: 10 },
+  shelfBlogAction: { minHeight: 42, borderRadius: 21, backgroundColor: '#FFE7D6', paddingLeft: 7, paddingRight: 14, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', shadowColor: '#071D24', shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.14, shadowRadius: 12, elevation: 3 },
+  shelfBlogIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
+  shelfBlogActionText: { color: '#153A46', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  webShelfPanel: { marginTop: 13, borderRadius: 18, backgroundColor: 'rgba(156,225,208,0.14)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(156,225,208,0.34)', padding: 12, gap: 10 },
   webShelfPanelWide: { flexDirection: 'row', alignItems: 'center' },
   webShelfTitle: { color: '#FFF8EF', fontSize: 14, fontFamily: 'Inter_700Bold' },
   webShelfText: { color: '#D9EFF7', fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', marginTop: 3 },
-  webShelfButton: { alignSelf: 'flex-start', minHeight: 36, borderRadius: 18, backgroundColor: '#FFE7D6', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  webShelfButton: { alignSelf: 'stretch', minHeight: 42, borderRadius: 21, backgroundColor: '#FFE7D6', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 156 },
   webShelfButtonDisabled: { opacity: 0.72 },
-  webShelfButtonText: { color: '#153A46', fontSize: 12, fontFamily: 'Inter_700Bold' },
+  webShelfButtonText: { color: '#153A46', fontSize: 13, fontFamily: 'Inter_700Bold' },
   premiumTestingCard: { marginHorizontal: 16, marginBottom: 14, borderRadius: 20, borderWidth: 1, borderColor: '#F2C3A3', backgroundColor: '#FFF1E6', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   premiumTestingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   premiumTestingTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
@@ -1131,6 +1148,12 @@ const styles = StyleSheet.create({
   testingSwitchOn: { backgroundColor: ORANGE },
   testingKnob: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff', shadowColor: '#8B5B38', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 6, elevation: 2 },
   testingKnobOn: { alignSelf: 'flex-end' },
+  beanStatsTile: { marginHorizontal: 16, marginBottom: 12, borderRadius: 20, borderWidth: 1, borderColor: '#F0D1BD', backgroundColor: '#FFF8EF', padding: 14, minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 13, shadowColor: '#8B5B38', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 18, elevation: 3 },
+  beanStatsIcon: { width: 54, height: 54, borderRadius: 16, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
+  beanStatsNumber: { color: INK, fontSize: 28, lineHeight: 32, fontFamily: 'Inter_700Bold' },
+  beanStatsLabel: { color: MUTED, fontSize: 13, fontFamily: 'Inter_700Bold', marginTop: 1 },
+  beanStatsBadge: { minHeight: 30, borderRadius: 15, backgroundColor: '#FFE7D6', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  beanStatsBadgeText: { color: '#A44822', fontSize: 11, fontFamily: 'Inter_700Bold' },
   searchRow: { marginHorizontal: 16, height: 48, borderRadius: 15, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14 },
   searchInput: { flex: 1, color: INK, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   grid: { width: '100%', maxWidth: 1060, alignSelf: 'center', paddingHorizontal: 14, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14 },

@@ -4,7 +4,7 @@ import React from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
 import { useApp } from '@/context/AppContext';
-import type { SubscriptionPlan } from '@/utils/premium';
+import { FREE_BLOG_POST_LIMIT, type SubscriptionPlan } from '@/utils/premium';
 
 const INK = '#2A1714';
 const MUTED = '#7B6258';
@@ -25,11 +25,11 @@ interface Props {
 const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   general: {
     title: 'Publish Your Travel Bean Blog',
-    subtitle: 'Turn private Beans into a public travel blog, with shareable links and HD exports.',
+    subtitle: `Make ${FREE_BLOG_POST_LIMIT} blog posts free, then upgrade for unlimited publishing, shareable links, and HD exports.`,
   },
   templates: {
     title: 'Unlock Blog Publishing',
-    subtitle: 'Create Beans for free, then upgrade when you are ready to publish them as a travel blog.',
+    subtitle: `Create Beans for free and make ${FREE_BLOG_POST_LIMIT} blog posts before upgrading for unlimited publishing.`,
   },
   limit: {
     title: "You've used your 10 free Beans this month",
@@ -47,7 +47,7 @@ const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
 
 const BENEFITS: Array<{ title: string; body: string; icon: keyof typeof Feather.glyphMap }> = [
   { title: 'Unlimited Beans', body: 'Create as many memories as you like.', icon: 'repeat' },
-  { title: 'Travel Blog Publishing', body: 'Turn selected Beans into public blog posts.', icon: 'globe' },
+  { title: 'Unlimited Blog Posts', body: `Your first ${FREE_BLOG_POST_LIMIT} blog posts are free. Premium removes the limit.`, icon: 'globe' },
   { title: 'Public Share Links', body: 'Share your posts with anyone in a browser.', icon: 'link' },
   { title: 'HD Export', body: 'Save sharper, cleaner memory cards.', icon: 'download-cloud' },
 ];

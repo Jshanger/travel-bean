@@ -5,7 +5,7 @@ import { lookupCoords } from '@/constants/cityCoords';
 import { useSubscription } from '@/services/revenuecat';
 import { BeanPhoto, BlogPost, BucketItem, BucketStatus, BucketTag, TravelBlogSettings, Trip, ItineraryItem, TripComment, VisitedPlace } from '@/types';
 import { encodePersistedBeanNotes, hydratePersistedBean } from '@/utils/beanPersistence';
-import { defaultPremiumState, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
+import { defaultPremiumState, FREE_BLOG_POST_LIMIT, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
 import { createDefaultBlogSettings, generateBlogDraftFromBean, publishBlogPost, uniqueBlogSlug } from '@/utils/travelBlog';
 
 function uid() {
@@ -17,6 +17,8 @@ const PREMIUM_STORAGE_KEY = 'travel-bean-premium-state';
 const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
+
+export const BLOG_POST_LIMIT_ERROR = 'BLOG_POST_LIMIT_REACHED';
 
 type TripDraft = Omit<Trip, 'id' | 'createdAt' | 'shareId' | 'itinerary'> & {
   itinerary?: Array<Omit<ItineraryItem, 'id' | 'votes' | 'comments'> | ItineraryItem>;
@@ -657,6 +659,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!place) throw new Error('Journal entry not found');
     const existing = blogPosts.find(post => post.sourcePlaceId === placeId && post.status === 'draft');
     if (existing) return existing;
+    const bloggedBeanIds = new Set(blogPosts.map(post => post.sourcePlaceId).filter(Boolean));
+    if (!isPremium && bloggedBeanIds.size >= FREE_BLOG_POST_LIMIT) {
+      const error = new Error(`You can make ${FREE_BLOG_POST_LIMIT} Travel Bean blog posts for free. Upgrade to publish more travel stories.`);
+      error.name = BLOG_POST_LIMIT_ERROR;
+      throw error;
+    }
     const draft = generateBlogDraftFromBean(place, blogPosts);
     if (!useLocalData) {
       try {
@@ -673,7 +681,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     await storeBlogPosts([draft, ...blogPosts]);
     return draft;
-  }, [blogPosts, getToken, places, storeBlogPosts, useLocalData]);
+  }, [blogPosts, getToken, isPremium, places, storeBlogPosts, useLocalData]);
 
   const editBlogPost = useCallback(async (id: string, post: Partial<BlogPost>) => {
     const now = new Date().toISOString();

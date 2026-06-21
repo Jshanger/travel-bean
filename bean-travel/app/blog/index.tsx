@@ -2,10 +2,11 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useApp } from '@/context/AppContext';
+import PremiumModal from '@/components/PremiumModal';
+import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
 import type { BlogPost, VisitedPlace } from '@/types';
 import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, publicBlogUrl } from '@/utils/travelBlog';
@@ -21,6 +22,7 @@ const BORDER = '#F1D7C5';
 export default function PrivateBlogHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [premiumVisible, setPremiumVisible] = useState(false);
   const { isSignedIn } = useAuth();
   const { blogSettings, blogPosts, places, createBlogDraftFromPlace } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
@@ -64,21 +66,26 @@ export default function PrivateBlogHome() {
       const draft = await createBlogDraftFromPlace(bean.id);
       router.push({ pathname: '/blog/editor/[id]', params: { id: draft.id } } as any);
     } catch (error: any) {
+      if (error?.name === BLOG_POST_LIMIT_ERROR) {
+        setPremiumVisible(true);
+        return;
+      }
       Alert.alert('Could not create draft', error?.message ?? 'Please try again.');
     }
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
-          <Feather name="chevron-left" size={23} color={INK} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Blog Home</Text>
-          <Text style={styles.subtitle}>Private owner page for writing, editing, and sharing.</Text>
+    <>
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
+            <Feather name="chevron-left" size={23} color={INK} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Blog Home</Text>
+            <Text style={styles.subtitle}>Private owner page for writing, editing, and sharing.</Text>
+          </View>
         </View>
-      </View>
 
       {!isSignedIn ? (
         <View style={styles.notice}>
@@ -141,12 +148,14 @@ export default function PrivateBlogHome() {
         onShare={sharePost}
       />
 
-      <BeansLibrary
-        beans={places}
-        posts={blogPosts}
-        onOpen={openBeanPipeline}
-      />
-    </ScrollView>
+        <BeansLibrary
+          beans={places}
+          posts={blogPosts}
+          onOpen={openBeanPipeline}
+        />
+      </ScrollView>
+      <PremiumModal visible={premiumVisible} mode="general" onClose={() => setPremiumVisible(false)} />
+    </>
   );
 }
 
