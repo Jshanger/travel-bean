@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import PaywallModal from '@/components/PaywallModal';
@@ -27,16 +27,28 @@ const MAGIC_TILES = [
 export default function MoreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isPro } = useApp();
+  const { isPro, userProfile, updateMarketingConsent } = useApp();
   const { signOut } = useAuth();
   const { user } = useUser();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
 
   function handleSignOut() {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
     ]);
+  }
+
+  async function handleMarketingConsent(nextValue: boolean) {
+    setSavingConsent(true);
+    try {
+      await updateMarketingConsent(nextValue);
+    } catch {
+      Alert.alert('Could not save', 'Please try again.');
+    } finally {
+      setSavingConsent(false);
+    }
   }
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
@@ -114,26 +126,50 @@ export default function MoreScreen() {
       </LinearGradient>
 
       {user && (
-        <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>{(user.primaryEmailAddress?.emailAddress?.[0] ?? 'U').toUpperCase()}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={[styles.accountEmail, { color: colors.foreground }]} numberOfLines={1}>
-                {user.primaryEmailAddress?.emailAddress}
-              </Text>
-              {isPro && (
-                <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.proBadgeTxt}>PRO</Text>
-                </View>
-              )}
+        <>
+          <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarText}>{(user.primaryEmailAddress?.emailAddress?.[0] ?? 'U').toUpperCase()}</Text>
             </View>
-            <Text style={[styles.accountSub, { color: colors.mutedForeground }]}>
-              {isPro ? 'Bean Pro · Active' : 'Your Bean journal'}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.accountEmail, { color: colors.foreground }]} numberOfLines={1}>
+                  {user.primaryEmailAddress?.emailAddress}
+                </Text>
+                {isPro && (
+                  <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.proBadgeTxt}>PRO</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.accountSub, { color: colors.mutedForeground }]}>
+                {isPro ? 'Bean Pro · Active' : 'Your Bean journal'}
+              </Text>
+            </View>
           </View>
-        </View>
+
+          <View style={[styles.emailConsentCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.emailConsentIcon}>
+              <Feather name="mail" size={18} color="#153A46" />
+            </View>
+            <View style={styles.emailConsentCopy}>
+              <Text style={[styles.emailConsentTitle, { color: colors.foreground }]}>Email updates</Text>
+              <Text style={[styles.emailConsentText, { color: colors.mutedForeground }]}>
+                Travel Bean can save your signup email and, if you choose, send product updates, travel tips, and offers.
+              </Text>
+              <Text style={[styles.emailConsentEmail, { color: colors.primary }]} numberOfLines={1}>
+                {userProfile?.email || user.primaryEmailAddress?.emailAddress}
+              </Text>
+            </View>
+            <Switch
+              value={Boolean(userProfile?.marketingConsent)}
+              onValueChange={handleMarketingConsent}
+              disabled={savingConsent}
+              trackColor={{ false: '#E0C5B4', true: '#9CE1D0' }}
+              thumbColor={userProfile?.marketingConsent ? '#153A46' : '#FFF8EF'}
+            />
+          </View>
+        </>
       )}
 
       <View style={styles.magicGrid}>
@@ -288,6 +324,12 @@ const styles = StyleSheet.create({
   signOutBtn: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   proBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   proBadgeTxt: { fontSize: 9, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: 0.5 },
+  emailConsentCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 22, borderWidth: 1, gap: 13, marginBottom: 14 },
+  emailConsentIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#CBEDE1', alignItems: 'center', justifyContent: 'center' },
+  emailConsentCopy: { flex: 1, minWidth: 0 },
+  emailConsentTitle: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  emailConsentText: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', marginTop: 2 },
+  emailConsentEmail: { fontSize: 12, fontFamily: 'Inter_700Bold', marginTop: 6 },
 
   upgradeCard: { borderRadius: 18, padding: 18, marginBottom: 24 },
   upgradeTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },

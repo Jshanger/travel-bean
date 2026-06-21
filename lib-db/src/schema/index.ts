@@ -67,6 +67,16 @@ export const userSubscriptions = pgTable("user_subscriptions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const userProfiles = pgTable("user_profiles", {
+  userId: text("user_id").primaryKey(),
+  email: text("email").notNull(),
+  name: text("name"),
+  imageUrl: text("image_url"),
+  marketingConsent: boolean("marketing_consent").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const placeVoiceNotes = pgTable("place_voice_notes", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),

@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { lookupCoords } from '@/constants/cityCoords';
@@ -22,6 +22,16 @@ export const BLOG_POST_LIMIT_ERROR = 'BLOG_POST_LIMIT_REACHED';
 
 type TripDraft = Omit<Trip, 'id' | 'createdAt' | 'shareId' | 'itinerary'> & {
   itinerary?: Array<Omit<ItineraryItem, 'id' | 'votes' | 'comments'> | ItineraryItem>;
+};
+
+type UserProfile = {
+  userId: string;
+  email: string;
+  name: string;
+  imageUrl: string;
+  marketingConsent: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 function getApiBase(): string {
@@ -199,6 +209,19 @@ function mapTrip(r: any): Trip {
   };
 }
 
+function mapUserProfile(r: any): UserProfile | null {
+  if (!r) return null;
+  return {
+    userId: r.userId ?? r.user_id ?? '',
+    email: r.email ?? '',
+    name: r.name ?? '',
+    imageUrl: r.imageUrl ?? r.image_url ?? '',
+    marketingConsent: Boolean(r.marketingConsent ?? r.marketing_consent),
+    createdAt: r.createdAt ?? r.created_at ?? new Date().toISOString(),
+    updatedAt: r.updatedAt ?? r.updated_at ?? new Date().toISOString(),
+  };
+}
+
 function mapBlogSettings(row: any): TravelBlogSettings | null {
   if (!row) return null;
   return {
@@ -256,11 +279,13 @@ interface AppContextType {
   freeBeansRemaining: number;
   premiumSince: string | null;
   canCreateBean: boolean;
+  userProfile: UserProfile | null;
   refreshEntitlements: () => Promise<void>;
   activatePro: () => Promise<void>;
   activatePremiumPlan: (plan: Exclude<SubscriptionPlan, 'free'>) => Promise<void>;
   deactivatePremiumMode: () => Promise<void>;
   recordBeanCreated: () => Promise<void>;
+  updateMarketingConsent: (marketingConsent: boolean) => Promise<void>;
   addPlace: (p: Omit<VisitedPlace, 'id' | 'createdAt'>) => Promise<VisitedPlace>;
   editPlace: (id: string, p: Partial<VisitedPlace>) => Promise<void>;
   deletePlace: (id: string) => Promise<void>;
@@ -291,6 +316,7 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isSignedIn } = useAuth();
+  const { user } = useUser();
   const { isSubscribed, refetchCustomerInfo } = useSubscription();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
@@ -303,6 +329,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [apiIsPro, setApiIsPro] = useState(false);
   const [forceLocalData, setForceLocalData] = useState(localPreview);
   const [premiumState, setPremiumState] = useState<UserPremiumState>(() => defaultPremiumState());
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const useLocalData = forceLocalData || !isSignedIn;
 
   const isPremium = isSubscribed || apiIsPro || premiumState.isPremium;
@@ -354,6 +381,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    if (useLocalData || !isSignedIn || !user) {
+      setUserProfile(null);
+      return () => {
+        mounted = false;
+      };
+    }
+    async function syncProfile() {
+      const email = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase();
+      if (!email) return;
+      try {
+        const token = await getTokenRef.current();
+        const profile = mapUserProfile(await apiFetch('/profile', token, {
+          method: 'PUT',
+          body: JSON.stringify({
+            email,
+            name: user?.fullName ?? user?.firstName ?? '',
+            imageUrl: user?.imageUrl ?? '',
+          }),
+        }));
+        if (mounted) setUserProfile(profile);
+      } catch (error) {
+        console.warn('Unable to sync user profile', error);
+      }
+    }
+    syncProfile();
+    return () => {
+      mounted = false;
+    };
+  }, [isSignedIn, useLocalData, user?.id, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName, user?.imageUrl]);
 
   useEffect(() => {
     let mounted = true;
@@ -475,6 +534,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storePremiumState(next);
   }, [isPremium, premiumState, storePremiumState]);
   recordBeanCreatedRef.current = recordBeanCreated;
+
+  const updateMarketingConsent = useCallback(async (marketingConsent: boolean) => {
+    const email = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase() || userProfile?.email;
+    if (useLocalData || !email) {
+      const now = new Date().toISOString();
+      setUserProfile(prev => ({
+        userId: prev?.userId ?? user?.id ?? '',
+        email: email ?? '',
+        name: prev?.name ?? user?.fullName ?? user?.firstName ?? '',
+        imageUrl: prev?.imageUrl ?? user?.imageUrl ?? '',
+        marketingConsent,
+        createdAt: prev?.createdAt ?? now,
+        updatedAt: now,
+      }));
+      return;
+    }
+    const token = await getToken();
+    const profile = mapUserProfile(await apiFetch('/profile', token, {
+      method: 'PUT',
+      body: JSON.stringify({
+        email,
+        name: user?.fullName ?? user?.firstName ?? userProfile?.name ?? '',
+        imageUrl: user?.imageUrl ?? userProfile?.imageUrl ?? '',
+        marketingConsent,
+      }),
+    }));
+    setUserProfile(profile);
+  }, [getToken, useLocalData, user?.firstName, user?.fullName, user?.id, user?.imageUrl, user?.primaryEmailAddress?.emailAddress, userProfile]);
 
   // ── Places ──────────────────────────────────────────────
   const addPlace = useCallback(async (p: Omit<VisitedPlace, 'id' | 'createdAt'>) => {
@@ -887,7 +974,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       freeBeansRemaining,
       premiumSince: premiumState.premiumSince,
       canCreateBean,
-      refreshEntitlements, activatePro, activatePremiumPlan, deactivatePremiumMode, recordBeanCreated,
+      userProfile,
+      refreshEntitlements, activatePro, activatePremiumPlan, deactivatePremiumMode, recordBeanCreated, updateMarketingConsent,
       addPlace, editPlace, deletePlace,
       addBucketItem, editBucketItem, deleteBucketItem,
       addTrip, editTrip, deleteTrip,

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, places, bucketItems, trips, placePhotos } from "@workspace/db";
+import { db, places, bucketItems, trips, placePhotos, userProfiles } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { getGcsFile, makeSignedUrl } from "../utils/storage";
@@ -36,7 +36,59 @@ function uid() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 }
 
-// ── Places ──────────────────────────────────────────────
+function profilePayload(row: typeof userProfiles.$inferSelect) {
+  return {
+    userId: row.userId,
+    email: row.email,
+    name: row.name ?? "",
+    imageUrl: row.imageUrl ?? "",
+    marketingConsent: row.marketingConsent,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+// User profile
+router.get("/profile", async (req, res) => {
+  const userId = (req as any).userId;
+  const [row] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+  if (!row) {
+    res.json(null);
+    return;
+  }
+  res.json(profilePayload(row));
+});
+
+router.put("/profile", async (req, res) => {
+  const userId = (req as any).userId;
+  const body = req.body ?? {};
+  const now = new Date();
+  const existing = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId)).then(rows => rows[0]);
+  const email = String(body.email ?? existing?.email ?? "").trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+  const values = {
+    userId,
+    email,
+    name: typeof body.name === "string" ? body.name.trim() || null : existing?.name ?? null,
+    imageUrl: typeof body.imageUrl === "string" ? body.imageUrl.trim() || null : existing?.imageUrl ?? null,
+    marketingConsent: typeof body.marketingConsent === "boolean" ? body.marketingConsent : existing?.marketingConsent ?? false,
+    updatedAt: now,
+  };
+  const [row] = await db
+    .insert(userProfiles)
+    .values(values)
+    .onConflictDoUpdate({
+      target: userProfiles.userId,
+      set: values,
+    })
+    .returning();
+  res.json(profilePayload(row));
+});
+
+// Places
 router.get("/places", async (req, res) => {
   const userId = (req as any).userId;
   const rows = await db.select().from(places).where(eq(places.userId, userId));
