@@ -105,8 +105,8 @@ export default function PrivateBlogHome() {
             <Feather name="chevron-left" size={23} color={INK} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Blog Home</Text>
-            <Text style={styles.subtitle}>Private owner page for writing, editing, and sharing.</Text>
+            <Text style={styles.title}>Blog Dashboard</Text>
+            <Text style={styles.subtitle}>Private owner page for editing and publishing.</Text>
           </View>
         </View>
 
@@ -127,8 +127,8 @@ export default function PrivateBlogHome() {
         <View style={styles.heroIcon}>
           <Feather name="globe" size={24} color="#fff" />
         </View>
-        <Text style={styles.heroTitle}>{blogSettings.title || 'My Travel Bean Blog'}</Text>
-        <Text style={styles.heroText}>{blogSettings.intro}</Text>
+        <Text style={styles.heroTitle}>Blog Dashboard</Text>
+        <Text style={styles.heroText}>Manage your public Travel Bean Blog, drafts, settings, and publishing from one private place.</Text>
 
         <View style={styles.publicLinkPanel}>
           <View style={styles.panelTitleRow}>
