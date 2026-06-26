@@ -264,6 +264,27 @@ function mapBlogPost(row: any): BlogPost {
   };
 }
 
+function parseStoredBlogSettings(value: string | null): TravelBlogSettings | null {
+  if (!value) return null;
+  try {
+    const now = new Date().toISOString();
+    const parsed = JSON.parse(value);
+    return parsed ? { ...createDefaultBlogSettings(now), ...parsed } : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseStoredBlogPosts(value: string | null): BlogPost[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 interface AppContextType {
   places: VisitedPlace[];
   bucketItems: BucketItem[];
@@ -422,11 +443,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ])
       .then(([settingsValue, postsValue]) => {
         if (!mounted) return;
-        const now = new Date().toISOString();
-        const loadedSettings = settingsValue ? JSON.parse(settingsValue) : null;
-        setBlogSettings(loadedSettings ? { ...createDefaultBlogSettings(now), ...loadedSettings } : createDefaultBlogSettings(now));
-        const loadedPosts = postsValue ? JSON.parse(postsValue) : [];
-        setBlogPosts(Array.isArray(loadedPosts) ? loadedPosts : []);
+        setBlogSettings(parseStoredBlogSettings(settingsValue) ?? createDefaultBlogSettings());
+        setBlogPosts(parseStoredBlogPosts(postsValue));
       })
       .catch(() => {
         if (!mounted) return;
@@ -462,14 +480,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       try {
         const token = await getTokenRef.current();
-        const [p, b, t, ent, blogSettingsRow, blogPostRows] = await Promise.all([
+        const [p, b, t, ent, blogSettingsRow, blogPostRows, localBlogSettingsValue, localBlogPostsValue] = await Promise.all([
           apiFetch('/places', token),
           apiFetch('/bucket', token),
           apiFetch('/trips', token),
           apiFetch('/entitlements', token).catch(() => ({ isPro: false })),
           blogApiFetch('/settings', token).catch(() => null),
           blogApiFetch('/posts', token).catch(() => []),
+          AsyncStorage.getItem(BLOG_SETTINGS_STORAGE_KEY),
+          AsyncStorage.getItem(BLOG_POSTS_STORAGE_KEY),
         ]);
+        const localBlogSettings = parseStoredBlogSettings(localBlogSettingsValue);
+        const localBlogPosts = parseStoredBlogPosts(localBlogPostsValue);
         setApiIsPro((ent as any).isPro === true);
         const photoRows = await apiFetch('/photos/all', token).catch(async () => {
           const rows = await Promise.all((p as any[]).map(place => apiFetch(`/photos?placeId=${encodeURIComponent(place.id)}`, token).catch(() => [])));
@@ -489,9 +511,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPlaces(loadedPlaces);
         setBucketItems((b as any[]).map(mapBucket));
         setTrips((t as any[]).map(mapTrip));
-        const mappedBlogSettings = mapBlogSettings(blogSettingsRow);
-        if (mappedBlogSettings) setBlogSettings(mappedBlogSettings);
-        setBlogPosts(Array.isArray(blogPostRows) ? blogPostRows.map(mapBlogPost) : []);
+        let mappedBlogSettings = mapBlogSettings(blogSettingsRow);
+        const publishedLocalPosts = localBlogPosts.filter(post => post.status === 'published');
+        if (!mappedBlogSettings && localBlogSettings?.username) {
+          const settingsToSync: TravelBlogSettings = {
+            ...localBlogSettings,
+            privacy: publishedLocalPosts.length && localBlogSettings.privacy === 'private' ? 'public' : localBlogSettings.privacy,
+          };
+          mappedBlogSettings = mapBlogSettings(await blogApiFetch('/settings', token, {
+            method: 'PUT',
+            body: JSON.stringify(settingsToSync),
+          }).catch(() => null));
+        }
+        if (mappedBlogSettings) {
+          await storeBlogSettings(mappedBlogSettings);
+        }
+        const cloudBlogPosts = Array.isArray(blogPostRows) ? blogPostRows.map(mapBlogPost) : [];
+        if (cloudBlogPosts.length) {
+          await storeBlogPosts(cloudBlogPosts);
+        } else if (mappedBlogSettings?.username && localBlogPosts.length) {
+          const syncedPosts = await Promise.all(localBlogPosts.map(async post => {
+            try {
+              const saved = mapBlogPost(await blogApiFetch('/posts', token, {
+                method: 'POST',
+                body: JSON.stringify(post),
+              }));
+              if (post.status === 'published') {
+                return mapBlogPost(await blogApiFetch(`/posts/${encodeURIComponent(saved.id)}/publish`, token, {
+                  method: 'POST',
+                  body: JSON.stringify({ privacy: post.privacy === 'password' ? 'password' : 'public' }),
+                }));
+              }
+              return saved;
+            } catch (error) {
+              console.warn('Cloud blog post migration failed; preserving post locally.', error);
+              return null;
+            }
+          }));
+          const migratedPosts = syncedPosts.filter((post): post is BlogPost => Boolean(post));
+          await storeBlogPosts(migratedPosts.length ? migratedPosts : localBlogPosts);
+        } else {
+          await storeBlogPosts(cloudBlogPosts);
+        }
       } catch (e) {
         console.error('Failed to load data', e);
         setForceLocalData(true);
@@ -503,7 +564,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [useLocalData]);
+  }, [storeBlogPosts, storeBlogSettings, useLocalData]);
 
   const activatePremiumPlan = useCallback(async (plan: Exclude<SubscriptionPlan, 'free'>) => {
     const next = normalizePremiumState({
@@ -804,6 +865,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!useLocalData) {
       try {
         const token = await getToken();
+        if (blogSettings.username && blogSettings.privacy === 'private') {
+          const publicSettings = mapBlogSettings(await blogApiFetch('/settings', token, {
+            method: 'PUT',
+            body: JSON.stringify({ ...blogSettings, privacy: 'public' }),
+          }));
+          if (publicSettings) await storeBlogSettings(publicSettings);
+        }
         const saved = mapBlogPost(await blogApiFetch(`/posts/${encodeURIComponent(id)}/publish`, token, {
           method: 'POST',
           body: JSON.stringify({}),
@@ -822,7 +890,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     await storeBlogPosts(next);
     return published;
-  }, [blogPosts, getToken, storeBlogPosts, useLocalData]);
+  }, [blogPosts, blogSettings, getToken, storeBlogPosts, storeBlogSettings, useLocalData]);
 
   const unpublishBlogPost = useCallback(async (id: string) => {
     if (!useLocalData) {

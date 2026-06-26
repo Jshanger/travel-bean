@@ -94,6 +94,10 @@ function publicImagePath(photoId: string) {
   return `/api/blog/public/images/${encodeURIComponent(photoId)}`;
 }
 
+function canUseStoredImageUrl(value: unknown) {
+  return typeof value === "string" && /^(https?:|data:image\/)/i.test(value);
+}
+
 function publicBlogPhotos(post: typeof blogPosts.$inferSelect, publicOnly = false) {
   if (publicOnly && post.privacy !== "public") {
     return {
@@ -103,10 +107,10 @@ function publicBlogPhotos(post: typeof blogPosts.$inferSelect, publicOnly = fals
   }
   const photos = (Array.isArray(post.photos) ? post.photos : []).map((photo: any) => ({
     ...photo,
-    imageUrl: photo?.id ? publicImagePath(photo.id) : photo?.imageUrl,
+    imageUrl: canUseStoredImageUrl(photo?.imageUrl) ? photo.imageUrl : (photo?.id ? publicImagePath(photo.id) : photo?.imageUrl),
   }));
   return {
-    coverImageUrl: post.coverPhotoId ? publicImagePath(post.coverPhotoId) : post.coverImageUrl,
+    coverImageUrl: canUseStoredImageUrl(post.coverImageUrl) ? post.coverImageUrl : (post.coverPhotoId ? publicImagePath(post.coverPhotoId) : post.coverImageUrl),
     photos,
   };
 }

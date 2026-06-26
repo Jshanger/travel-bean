@@ -1,9 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useApp } from '@/context/AppContext';
 import type { BlogPost, TravelBlogSettings } from '@/types';
 import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, formatPublicUsername, publicBlogUrl, sanitizeBlogUsername } from '@/utils/travelBlog';
@@ -19,20 +18,12 @@ const BORDER = '#F1D7C5';
 export default function PublicBlogPost() {
   const router = useRouter();
   const params = useLocalSearchParams<{ username?: string; slug?: string }>();
-  const { blogSettings, blogPosts } = useApp();
   const [password, setPassword] = useState('');
   const [remotePost, setRemotePost] = useState<{ settings: TravelBlogSettings; post: BlogPost & { passwordRequired?: boolean } } | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
-  const owner = sanitizeBlogUsername(blogSettings.username);
   const requested = sanitizeBlogUsername(String(params.username ?? ''));
-  const localPost = useMemo(() => blogPosts.find(item =>
-    item.slug === params.slug &&
-    item.status === 'published' &&
-    item.privacy !== 'private'
-  ), [blogPosts, params.slug]);
-  const usingLocalPost = Boolean(owner && owner === requested && localPost);
-  const post = usingLocalPost ? localPost : remotePost?.post;
-  const activeSettings = usingLocalPost ? blogSettings : remotePost?.settings;
+  const post = remotePost?.post;
+  const activeSettings = remotePost?.settings;
   const passwordRequired = Boolean(post && 'passwordRequired' in post && post.passwordRequired);
   const unlocked = post?.privacy !== 'password' || password === (post.password ?? '') || !passwordRequired;
 
@@ -58,7 +49,7 @@ export default function PublicBlogPost() {
 
   useEffect(() => {
     let mounted = true;
-    if (usingLocalPost || !requested || !params.slug) {
+    if (!requested || !params.slug) {
       setRemoteLoaded(true);
       return () => {
         mounted = false;
@@ -81,7 +72,7 @@ export default function PublicBlogPost() {
     return () => {
       mounted = false;
     };
-  }, [params.slug, password, requested, usingLocalPost]);
+  }, [params.slug, password, requested]);
 
   if ((!activeSettings || !post) && !remoteLoaded) {
     return (

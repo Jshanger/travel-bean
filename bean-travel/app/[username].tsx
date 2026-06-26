@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useApp } from '@/context/AppContext';
 import { BlogPost, TravelBlogSettings } from '@/types';
 import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, formatPublicUsername, publicBlogUrl, sanitizeBlogUsername } from '@/utils/travelBlog';
@@ -19,19 +18,15 @@ const BORDER = '#F1D7C5';
 export default function PublicBlogHome() {
   const router = useRouter();
   const params = useLocalSearchParams<{ username?: string }>();
-  const { blogSettings, blogPosts } = useApp();
   const [remoteBlog, setRemoteBlog] = useState<{ settings: TravelBlogSettings; posts: BlogPost[] } | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const requested = String(params.username ?? '');
   const username = sanitizeBlogUsername(requested);
-  const owner = sanitizeBlogUsername(blogSettings.username);
   const isBlogRoute = requested.startsWith('@');
-  const localPosts = useMemo(() => blogPosts
+  const activeSettings = remoteBlog?.settings;
+  const posts = useMemo(() => (remoteBlog?.posts ?? [])
     .filter(post => post.status === 'published' && post.privacy !== 'private')
-    .sort((a, b) => (b.publishedAt ?? b.updatedAt).localeCompare(a.publishedAt ?? a.updatedAt)), [blogPosts]);
-  const usingLocalBlog = Boolean(isBlogRoute && owner && username === owner);
-  const activeSettings = usingLocalBlog ? blogSettings : remoteBlog?.settings;
-  const posts = usingLocalBlog ? localPosts : (remoteBlog?.posts ?? []);
+    .sort((a, b) => (b.publishedAt ?? b.updatedAt).localeCompare(a.publishedAt ?? a.updatedAt)), [remoteBlog?.posts]);
   const places = Array.from(new Set(posts.map(post => `${post.place}, ${post.country}`))).slice(0, 8);
   const blogUrl = activeSettings ? publicBlogUrl(activeSettings) : '';
 
@@ -57,7 +52,7 @@ export default function PublicBlogHome() {
 
   useEffect(() => {
     let mounted = true;
-    if (!isBlogRoute || usingLocalBlog || !username) {
+    if (!isBlogRoute || !username) {
       setRemoteLoaded(true);
       return () => {
         mounted = false;
@@ -79,7 +74,7 @@ export default function PublicBlogHome() {
     return () => {
       mounted = false;
     };
-  }, [isBlogRoute, username, usingLocalBlog]);
+  }, [isBlogRoute, username]);
 
   if (!isBlogRoute || (!activeSettings && remoteLoaded)) {
     return <NotFound />;
@@ -185,8 +180,8 @@ function PostCard({ post, onPress, onShare }: { post: BlogPost; onPress: () => v
 function NotFound() {
   return (
     <View style={[styles.screen, styles.notFound]}>
-      <Text style={styles.emptyTitle}>Travel Bean blog not found</Text>
-      <Text style={styles.emptyText}>Check the username or publish a blog first.</Text>
+      <Text style={styles.emptyTitle}>This Travel Bean Blog is not public yet</Text>
+      <Text style={styles.emptyText}>Ask the blogger to publish from their Blog Dashboard.</Text>
     </View>
   );
 }

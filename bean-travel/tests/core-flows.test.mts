@@ -105,7 +105,7 @@ test('first launch opens Travel Bean for guests instead of forcing legacy auth',
   assert.match(appContext, /const \[forceLocalData, setForceLocalData\] = useState\(localPreview\)/);
   assert.match(appContext, /const useLocalData = forceLocalData \|\| !isSignedIn/);
   assert.match(appContext, /const getTokenRef = useRef\(getToken\)/);
-  assert.match(appContext, /\}, \[useLocalData\]\);/);
+  assert.match(appContext, /\}, \[(?:storeBlogPosts, storeBlogSettings, )?useLocalData\]\);/);
   assert.doesNotMatch(rootLayout, /initializeRevenueCat\(\)/);
   assert.match(revenueCat, /enabled: isConfigured/);
   assert.match(revenueCat, /RevenueCat initialization failed/);
