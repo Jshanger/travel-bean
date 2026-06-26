@@ -68,7 +68,7 @@ export default function HomeScreen() {
           <Feather name="settings" size={20} color={INK} />
         </TouchableOpacity>
         <Text style={styles.heroKicker}>Travel blogging on the go</Text>
-        <Text style={styles.heroTitle}>Turn today’s photos into a blog post.</Text>
+        <Text style={styles.heroTitle}>Quickly turn photos into blog posts.</Text>
         <Text style={styles.heroSub}>Add photos, capture the moment, create a Bean, then publish it to your Travel Bean Blog.</Text>
         <HomeHeroVisual />
         <TouchableOpacity style={styles.primaryButton} onPress={startBean} activeOpacity={0.86}>
