@@ -31,6 +31,9 @@ export default function PrivateBlogHome() {
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
+  const publicReaderLinkText = isSignedIn
+    ? (blogUrl || 'Choose a username to create your public link')
+    : 'Sign in to publish your blog link to the cloud';
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
 
   async function ensurePublicBlogSettings() {
@@ -161,17 +164,21 @@ export default function PrivateBlogHome() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.panelTitle}>Public blog for readers</Text>
-              <Text style={styles.panelText}>This is the link other people use to read your published posts.</Text>
+              <Text style={styles.panelText}>
+                {isSignedIn
+                  ? 'This is the link other people use to read your published posts.'
+                  : 'Your posts are only on this device until you sign in and publish them to cloud.'}
+              </Text>
             </View>
           </View>
           <Text style={styles.linkLabel}>Public reader link</Text>
-          <Text style={styles.publicLink}>{blogUrl || 'Choose a username to create your public link'}</Text>
+          <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
-              <Feather name="share-2" size={16} color="#fff" />
-              <Text style={styles.primaryText}>Share Public Blog</Text>
+              <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
+              <Text style={styles.primaryText}>{isSignedIn ? 'Share Public Blog' : 'Sign In to Publish'}</Text>
             </TouchableOpacity>
-            {blogUrl ? (
+            {blogUrl && isSignedIn ? (
               <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
                 <Feather name="external-link" size={16} color={ORANGE} />
                 <Text style={styles.secondaryText}>View Public Blog</Text>
