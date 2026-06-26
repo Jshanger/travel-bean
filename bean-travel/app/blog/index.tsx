@@ -35,6 +35,11 @@ export default function PrivateBlogHome() {
     ? (blogUrl || 'Choose a username to create your public link')
     : 'Sign in to publish your blog link to the cloud';
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
+  const bottomNavHeight = 76 + Math.max(insets.bottom, 10);
+
+  function goSignIn() {
+    router.push({ pathname: '/sign-in', params: { redirect: '/blog' } } as any);
+  }
 
   async function ensurePublicBlogSettings() {
     if (!blogUrl) {
@@ -43,7 +48,10 @@ export default function PrivateBlogHome() {
     }
     if (!isSignedIn) {
       setDashboardLinkStatus('signin');
-      Alert.alert('Sign in first', 'Sign in so Travel Bean can publish your blog to the cloud for readers.');
+      Alert.alert('Sign in first', 'Sign in so Travel Bean can publish your blog to the cloud for readers.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: goSignIn },
+      ]);
       return null;
     }
     try {
@@ -86,6 +94,7 @@ export default function PrivateBlogHome() {
     setDashboardLinkStatus('idle');
     if (!isSignedIn) {
       setDashboardLinkStatus('signin');
+      goSignIn();
       return;
     }
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -126,7 +135,7 @@ export default function PrivateBlogHome() {
 
   return (
     <>
-      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top }]}>
+      <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top, paddingBottom: bottomNavHeight + 44 }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/journal' as any)} activeOpacity={0.86}>
             <Feather name="chevron-left" size={23} color={INK} />
@@ -145,7 +154,7 @@ export default function PrivateBlogHome() {
             <Text style={styles.noticeTitle}>Sign in on your laptop to manage your blog</Text>
             <Text style={styles.noticeText}>Public readers can see shared posts, but editing stays inside this private area.</Text>
           </View>
-          <TouchableOpacity style={styles.noticeButton} onPress={() => router.push('/(auth)/sign-in' as any)} activeOpacity={0.86}>
+          <TouchableOpacity style={styles.noticeButton} onPress={goSignIn} activeOpacity={0.86}>
             <Text style={styles.noticeButtonText}>Sign In</Text>
           </TouchableOpacity>
         </View>
@@ -262,7 +271,45 @@ export default function PrivateBlogHome() {
         />
       </ScrollView>
       <PremiumModal visible={premiumVisible} mode="general" onClose={() => setPremiumVisible(false)} />
+      <BlogBottomNav bottomInset={insets.bottom} />
     </>
+  );
+}
+
+function BlogBottomNav({ bottomInset }: { bottomInset: number }) {
+  const router = useRouter();
+  const tabs = [
+    { label: 'Home', icon: 'home' as const, route: '/' },
+    { label: 'Passport', icon: 'map' as const, route: '/passport' },
+    { label: 'Create', icon: 'plus' as const, route: '/create', primary: true },
+    { label: 'Journal', icon: 'book-open' as const, route: '/journal' },
+    { label: 'Blog', icon: 'globe' as const, route: '/blog', active: true },
+  ];
+
+  return (
+    <View style={[styles.bottomNav, { paddingBottom: Math.max(bottomInset, 10) }]}>
+      {tabs.map(tab => (
+        <TouchableOpacity
+          key={tab.label}
+          style={styles.bottomNavItem}
+          onPress={() => router.replace(tab.route as any)}
+          activeOpacity={0.84}
+        >
+          <View style={[
+            styles.bottomIconWrap,
+            tab.primary && styles.bottomCreateIcon,
+            tab.active && !tab.primary && styles.bottomActiveIcon,
+          ]}>
+            <Feather
+              name={tab.icon}
+              size={tab.primary ? 25 : 22}
+              color={tab.primary ? '#fff' : tab.active ? ORANGE : '#9E7B6B'}
+            />
+          </View>
+          <Text style={[styles.bottomNavLabel, tab.active && styles.bottomNavLabelActive]}>{tab.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
@@ -377,7 +424,7 @@ function BeansLibrary({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: PAPER },
-  content: { width: '100%', maxWidth: 920, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 70 },
+  content: { width: '100%', maxWidth: 920, alignSelf: 'center', paddingHorizontal: 20 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   backButton: { minWidth: 116, height: 44, borderRadius: 22, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFF1E6' },
   backButtonText: { color: INK, fontSize: 13, fontFamily: 'Inter_700Bold' },
@@ -441,4 +488,36 @@ const styles = StyleSheet.create({
   beanBody: { flex: 1, padding: 14 },
   beanTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   statusChip: { color: ORANGE, fontSize: 11, fontFamily: 'Inter_700Bold', backgroundColor: '#FFF1E6', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5, overflow: 'hidden' },
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 76,
+    paddingTop: 7,
+    paddingHorizontal: 5,
+    backgroundColor: PAPER,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-around',
+  },
+  bottomNavItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  bottomIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  bottomActiveIcon: { backgroundColor: '#FFF1E6' },
+  bottomCreateIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginTop: -16,
+    backgroundColor: ORANGE,
+    shadowColor: INK,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  bottomNavLabel: { color: '#9E7B6B', fontSize: 11, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
+  bottomNavLabelActive: { color: ORANGE },
 });

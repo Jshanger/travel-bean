@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSSO } from '@clerk/expo';
 import { useSignInLegacy } from '@/hooks/useClerkAuth';
 import * as AuthSession from 'expo-auth-session';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -21,6 +21,7 @@ export default function SignInScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string | string[] }>();
   const { signIn, setActive, isLoaded } = useSignInLegacy();
   const { startSSOFlow } = useSSO();
 
@@ -30,6 +31,7 @@ export default function SignInScreen() {
   const [verifyCode, setVerifyCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const redirectTo = normalizeRedirect(params.redirect);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;
@@ -47,7 +49,7 @@ export default function SignInScreen() {
 
       if (attempt.status === 'complete' && attempt.createdSessionId) {
         await setActive({ session: attempt.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace(redirectTo as any);
         return;
       }
 
@@ -67,7 +69,7 @@ export default function SignInScreen() {
         });
         if (result.status === 'complete' && result.createdSessionId) {
           await setActive({ session: result.createdSessionId });
-          router.replace('/(tabs)');
+          router.replace(redirectTo as any);
         }
       } else if (hasEmailCode) {
         // Step 2b: send email OTP then show code screen
@@ -105,7 +107,7 @@ export default function SignInScreen() {
       });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace(redirectTo as any);
       }
     } catch (err: any) {
       const msg =
@@ -128,7 +130,7 @@ export default function SignInScreen() {
       });
       if (createdSessionId && setSSOActive) {
         await setSSOActive({ session: createdSessionId });
-        router.replace('/(tabs)');
+        router.replace(redirectTo as any);
       }
     } catch (e: any) {
       const msg = e?.errors?.[0]?.longMessage ?? e?.message ?? 'Google sign-in failed.';
@@ -258,6 +260,13 @@ export default function SignInScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function normalizeRedirect(value?: string | string[]) {
+  const next = Array.isArray(value) ? value[0] : value;
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return '/(tabs)';
+  if (next.includes('://')) return '/(tabs)';
+  return next;
 }
 
 const styles = StyleSheet.create({

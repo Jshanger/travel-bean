@@ -322,9 +322,9 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
     ${mapped.length > 0 ? `
     var bounds = [${markerCoords.map(p => `[${p.latitude}, ${p.longitude}]`).join(',')}];
     if (bounds.length === 1) {
-      map.setView(bounds[0], ${isHomePreview ? 4 : 6});
+      map.setView(bounds[0], ${isHomePreview ? 4 : 3});
     } else {
-      map.fitBounds(bounds, { padding: [${isHomePreview ? 34 : 60}, ${isHomePreview ? 34 : 60}], maxZoom: ${isHomePreview ? 4 : 8} });
+      map.fitBounds(bounds, { padding: [${isHomePreview ? 34 : 76}, ${isHomePreview ? 34 : 76}], maxZoom: ${isHomePreview ? 4 : 5} });
     }
     ` : ''}
   </script>

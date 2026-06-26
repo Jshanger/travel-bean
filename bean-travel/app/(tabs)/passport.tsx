@@ -25,7 +25,7 @@ export default function PassportScreen() {
   const beans = useMemo(() => allBeans(places).map(enrichPlaceCoords), [places]);
   const mappedBeans = useMemo(() => beans.filter(hasCoords), [beans]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = mappedBeans.find(place => place.id === selectedId) ?? mappedBeans[0];
+  const selected = selectedId ? mappedBeans.find(place => place.id === selectedId) : undefined;
   const countries = new Set(mappedBeans.map(place => place.country)).size;
   const top = Platform.OS === 'web' ? 0 : insets.top;
   const bottom = Platform.OS === 'web' ? 96 : 96 + insets.bottom;
@@ -51,7 +51,7 @@ export default function PassportScreen() {
       setSelectedId(requestedId);
       return;
     }
-    if (!selectedId && mappedBeans[0]) setSelectedId(mappedBeans[0].id);
+    if (selectedId && !mappedBeans.some(place => place.id === selectedId)) setSelectedId(null);
   }, [mappedBeans, params.id, params.placeId, selectedId]);
 
   return (
@@ -59,7 +59,7 @@ export default function PassportScreen() {
       <View style={styles.mapHero}>
         <PlacesMap
           places={mappedBeans}
-          selectedPlaceId={selected?.id ?? selectedId}
+          selectedPlaceId={selected?.id ?? null}
           onPlacePress={place => setSelectedId(place.id)}
         />
         <View pointerEvents="none" style={styles.mapBlueWash} />
@@ -118,8 +118,12 @@ export default function PassportScreen() {
             <View style={styles.emptyIcon}>
               <Feather name="map" size={30} color="#fff" />
             </View>
-            <Text style={styles.emptyTitle}>Where have you been?</Text>
-            <Text style={styles.emptyText}>Create a Bean with a place to pin your first memory on the map.</Text>
+            <Text style={styles.emptyTitle}>{mappedBeans.length ? 'All visited places' : 'Where have you been?'}</Text>
+            <Text style={styles.emptyText}>
+              {mappedBeans.length
+                ? 'Tap any pin or place below to highlight it on the map and open the matching journal entry.'
+                : 'Create a Bean with a place to pin your first memory on the map.'}
+            </Text>
           </View>
         )}
 
