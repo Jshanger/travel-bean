@@ -187,10 +187,6 @@ export default function JournalScreen() {
     router.replace('/(tabs)');
   }
 
-  function openTravelBlog() {
-    router.push('/blog' as any);
-  }
-
   async function togglePremiumTesting() {
     try {
       if (Platform.OS !== 'web') await Haptics.selectionAsync();
@@ -829,20 +825,6 @@ export default function JournalScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.blogDashboardCard} onPress={openTravelBlog} activeOpacity={0.86}>
-        <View style={styles.blogDashboardIcon}>
-          <Feather name="globe" size={18} color="#153A46" />
-        </View>
-        <View style={styles.blogDashboardCopy}>
-          <Text style={styles.blogDashboardTitle}>Edit Travel Blog</Text>
-          <Text style={styles.blogDashboardText}>Open your private dashboard to edit drafts, manage posts, and publish.</Text>
-        </View>
-        <View style={styles.blogDashboardAction}>
-          <Text style={styles.blogDashboardActionText}>Open dashboard</Text>
-          <Feather name="arrow-right" size={15} color="#fff" />
-        </View>
-      </TouchableOpacity>
-
       <TouchableOpacity style={styles.premiumTestingCard} onPress={togglePremiumTesting} activeOpacity={0.88}>
         <View style={styles.premiumTestingIcon}>
           <Feather name={isPremium ? 'zap' : 'star'} size={18} color={ORANGE} />
@@ -1095,13 +1077,6 @@ const styles = StyleSheet.create({
   shelfContentStacked: { width: '100%' },
   journalMascotTitle: { color: '#FFF8EF', fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
   journalMascotText: { color: '#D9EFF7', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 5 },
-  blogDashboardCard: { marginHorizontal: 16, marginBottom: 12, borderRadius: 20, borderWidth: 1, borderColor: '#B8E5DA', backgroundColor: '#EFFAF5', padding: 13, minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#10515A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 16, elevation: 2 },
-  blogDashboardIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#9CE1D0', alignItems: 'center', justifyContent: 'center' },
-  blogDashboardCopy: { flex: 1, minWidth: 0 },
-  blogDashboardTitle: { color: INK, fontSize: 16, fontFamily: 'Inter_700Bold' },
-  blogDashboardText: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
-  blogDashboardAction: { minHeight: 38, borderRadius: 19, backgroundColor: '#153A46', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  blogDashboardActionText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
   premiumTestingCard: { marginHorizontal: 16, marginBottom: 14, borderRadius: 20, borderWidth: 1, borderColor: '#F2C3A3', backgroundColor: '#FFF1E6', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   premiumTestingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   premiumTestingTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },

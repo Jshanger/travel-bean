@@ -143,7 +143,7 @@ export default function PrivateBlogHome() {
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Blog Dashboard</Text>
-            <Text style={styles.subtitle}>Private owner page for editing and publishing.</Text>
+            <Text style={styles.subtitle}>Write, edit, and publish your Travel Bean Blog.</Text>
           </View>
         </View>
 
@@ -151,8 +151,8 @@ export default function PrivateBlogHome() {
         <View style={styles.notice}>
           <Feather name="lock" size={18} color={ORANGE} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.noticeTitle}>Sign in on your laptop to manage your blog</Text>
-            <Text style={styles.noticeText}>Public readers can see shared posts, but editing stays inside this private area.</Text>
+            <Text style={styles.noticeTitle}>Sign in to use your private dashboard</Text>
+            <Text style={styles.noticeText}>Readers see your public blog. Editing, drafts, and publishing stay here after you sign in.</Text>
           </View>
           <TouchableOpacity style={styles.noticeButton} onPress={goSignIn} activeOpacity={0.86}>
             <Text style={styles.noticeButtonText}>Sign In</Text>
@@ -162,10 +162,10 @@ export default function PrivateBlogHome() {
 
       <View style={styles.heroCard}>
         <View style={styles.heroIcon}>
-          <Feather name="globe" size={24} color="#fff" />
+          <Feather name="layout" size={24} color="#fff" />
         </View>
-        <Text style={styles.heroTitle}>Blog Dashboard</Text>
-        <Text style={styles.heroText}>Manage your public Travel Bean Blog, drafts, settings, and publishing from one private place.</Text>
+        <Text style={styles.heroTitle}>Private Blog Dashboard</Text>
+        <Text style={styles.heroText}>Only you can see this area. Manage drafts, published posts, settings, and laptop access from one place.</Text>
 
         <View style={styles.publicLinkPanel}>
           <View style={styles.panelTitleRow}>
@@ -173,11 +173,11 @@ export default function PrivateBlogHome() {
               <Feather name="eye" size={16} color={ORANGE} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.panelTitle}>Public blog for readers</Text>
+              <Text style={styles.panelTitle}>Public Travel Bean Blog</Text>
               <Text style={styles.panelText}>
                 {isSignedIn
-                  ? 'This is the link other people use to read your published posts.'
-                  : 'Your posts are only on this device until you sign in and publish them to cloud.'}
+                  ? 'This is the reader-facing blog link. Other people use it to see your published posts.'
+                  : 'Sign in to publish your reader-facing blog link to the cloud.'}
               </Text>
             </View>
           </View>
@@ -186,12 +186,12 @@ export default function PrivateBlogHome() {
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
               <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
-              <Text style={styles.primaryText}>{isSignedIn ? 'Share Public Blog' : 'Sign In to Publish'}</Text>
+              <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Sign In to Publish'}</Text>
             </TouchableOpacity>
             {blogUrl && isSignedIn ? (
               <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
                 <Feather name="external-link" size={16} color={ORANGE} />
-                <Text style={styles.secondaryText}>View Public Blog</Text>
+                <Text style={styles.secondaryText}>View Reader Blog</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -202,8 +202,8 @@ export default function PrivateBlogHome() {
             <Feather name="monitor" size={18} color="#153A46" />
           </View>
           <View style={styles.webManageCopy}>
-            <Text style={styles.webManageTitle}>Private editing dashboard</Text>
-            <Text style={styles.webManageText}>This is for you only. Log in on a laptop to edit posts, organise drafts, change settings, and publish.</Text>
+            <Text style={styles.webManageTitle}>Edit on laptop</Text>
+            <Text style={styles.webManageText}>Send yourself a secure dashboard link for writing longer posts and managing drafts on a larger screen.</Text>
             <View style={styles.dashboardActionRow}>
               <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/blog/settings' as any)} activeOpacity={0.86}>
                 <Feather name="settings" size={16} color={ORANGE} />
@@ -220,7 +220,7 @@ export default function PrivateBlogHome() {
                 ) : (
                   <>
                     <Feather name="mail" size={16} color="#fff" />
-                    <Text style={styles.dashboardPrimaryText}>Email Dashboard Link</Text>
+                    <Text style={styles.dashboardPrimaryText}>Email Laptop Link</Text>
                   </>
                 )}
               </TouchableOpacity>
