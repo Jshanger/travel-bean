@@ -51,6 +51,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="passport"
+        options={{
+          title: 'Passport',
+          tabBarIcon: ({ color }) => <Feather name="map" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="create"
         options={{
           title: 'Create',
@@ -70,7 +77,15 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
         }}
       />
-      {['places', 'passport', 'trips', 'bucket', 'more'].map(name => (
+      <Tabs.Screen
+        name="blog"
+        options={{
+          title: 'Blog',
+          href: '/blog' as any,
+          tabBarIcon: ({ color }) => <Feather name="globe" size={22} color={color} />,
+        }}
+      />
+      {['places', 'trips', 'bucket', 'more'].map(name => (
         <Tabs.Screen key={name} name={name} options={{ href: null }} />
       ))}
     </Tabs>

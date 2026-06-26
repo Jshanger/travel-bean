@@ -834,11 +834,11 @@ export default function JournalScreen() {
           <Feather name="globe" size={18} color="#153A46" />
         </View>
         <View style={styles.blogDashboardCopy}>
-          <Text style={styles.blogDashboardTitle}>Blog Dashboard</Text>
-          <Text style={styles.blogDashboardText}>Edit drafts, manage public posts, and publish your Travel Bean Blog.</Text>
+          <Text style={styles.blogDashboardTitle}>Edit Travel Blog</Text>
+          <Text style={styles.blogDashboardText}>Open your private dashboard to edit drafts, manage posts, and publish.</Text>
         </View>
         <View style={styles.blogDashboardAction}>
-          <Text style={styles.blogDashboardActionText}>Open</Text>
+          <Text style={styles.blogDashboardActionText}>Open dashboard</Text>
           <Feather name="arrow-right" size={15} color="#fff" />
         </View>
       </TouchableOpacity>

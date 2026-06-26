@@ -64,9 +64,12 @@ export default function HomeScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: top + 14, paddingBottom: bottom }} showsVerticalScrollIndicator={false}>
       <View style={styles.phoneShell}>
       <View style={styles.heroCard}>
-        <Text style={styles.heroKicker}>Hi there!</Text>
-        <Text style={styles.heroTitle}>Turn your photos into travel stories.</Text>
-        <Text style={styles.heroSub}>Add photos. Capture a memory. Create a Bean.</Text>
+        <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/(tabs)/more')} activeOpacity={0.86}>
+          <Feather name="settings" size={20} color={INK} />
+        </TouchableOpacity>
+        <Text style={styles.heroKicker}>Travel blogging on the go</Text>
+        <Text style={styles.heroTitle}>Turn today’s photos into a blog post.</Text>
+        <Text style={styles.heroSub}>Add photos, capture the moment, create a Bean, then publish it to your Travel Bean Blog.</Text>
         <HomeHeroVisual />
         <TouchableOpacity style={styles.primaryButton} onPress={startBean} activeOpacity={0.86}>
           <Feather name="plus" size={32} color="#fff" />
@@ -74,7 +77,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.blogButton} onPress={openTravelBlog} activeOpacity={0.86}>
           <Feather name="globe" size={21} color={ORANGE} />
-          <Text style={styles.blogButtonText}>My Travel Blog</Text>
+          <Text style={styles.blogButtonText}>Blog Dashboard</Text>
         </TouchableOpacity>
         <View style={[styles.sparkle, styles.sparkleLeft]} />
         <View style={[styles.sparkle, styles.sparkleRight]} />
@@ -151,7 +154,7 @@ export default function HomeScreen() {
             <Feather name={isPremium ? 'check' : 'star'} size={19} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog publishing is on.' : 'Publish your Travel Bean Blog.'}</Text>
+            <Text style={styles.premiumTitle}>{isPremium ? 'Travel Blog publishing is on.' : 'Publish while you travel.'}</Text>
             <Text style={styles.premiumBody}>
               {isPremium
                 ? 'Create, edit, and publish blog posts from your saved Beans.'
@@ -283,7 +286,8 @@ const styles = StyleSheet.create({
   phoneShell: { width: '100%', maxWidth: 520, alignSelf: 'center' },
   iconButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   noticeDot: { position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 5, backgroundColor: ORANGE },
-  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 676, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16 },
+  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 676, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16, position: 'relative' },
+  settingsButton: { position: 'absolute', right: 18, top: 4, zIndex: 5, width: 42, height: 42, borderRadius: 21, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   heroKicker: { color: '#874716', fontSize: 20, fontFamily: 'Inter_500Medium', marginBottom: 10, textAlign: 'center' },
   heroTitle: { color: INK, fontSize: 39, lineHeight: 45, fontFamily: 'Inter_700Bold', marginBottom: 16, textAlign: 'center', maxWidth: 440 },
   heroSub: { color: MUTED, fontSize: 20, lineHeight: 28, fontFamily: 'Inter_500Medium', marginBottom: 18, textAlign: 'center', maxWidth: 430 },
