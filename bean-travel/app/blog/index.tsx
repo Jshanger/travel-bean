@@ -128,8 +128,9 @@ export default function PrivateBlogHome() {
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/journal' as any)} activeOpacity={0.86}>
             <Feather name="chevron-left" size={23} color={INK} />
+            <Text style={styles.backButtonText}>Journal</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Blog Dashboard</Text>
@@ -378,7 +379,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: PAPER },
   content: { width: '100%', maxWidth: 920, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 70 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  backButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1E6' },
+  backButton: { minWidth: 116, height: 44, borderRadius: 22, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFF1E6' },
+  backButtonText: { color: INK, fontSize: 13, fontFamily: 'Inter_700Bold' },
   title: { color: INK, fontSize: 30, fontFamily: 'Inter_700Bold' },
   subtitle: { color: MUTED, fontSize: 14, fontFamily: 'Inter_500Medium', marginTop: 3 },
   notice: { borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
