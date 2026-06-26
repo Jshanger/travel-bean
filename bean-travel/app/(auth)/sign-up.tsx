@@ -71,6 +71,21 @@ export default function SignUpScreen() {
     setLoading(true);
     setErrorMsg('');
     try {
+      if (Platform.OS === 'web') {
+        if (!signUp?.authenticateWithRedirect) {
+          setErrorMsg('Google sign-up is still loading. Please try again.');
+          return;
+        }
+        await signUp.authenticateWithRedirect({
+          strategy: 'oauth_google',
+          redirectUrl: buildWebUrl('/sso-callback'),
+          redirectUrlComplete: '/(tabs)',
+          continueSignIn: true,
+          continueSignUp: true,
+        });
+        return;
+      }
+
       const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl: AuthSession.makeRedirectUri(),
@@ -85,7 +100,7 @@ export default function SignUpScreen() {
     } finally {
       setLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [signUp, startSSOFlow, router]);
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -192,6 +207,14 @@ export default function SignUpScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function buildWebUrl(path: string) {
+  const origin =
+    typeof globalThis !== 'undefined'
+      ? ((globalThis as any).location?.origin as string | undefined)
+      : undefined;
+  return origin ? `${origin}${path}` : path;
 }
 
 const styles = StyleSheet.create({
