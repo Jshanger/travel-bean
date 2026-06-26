@@ -68,8 +68,13 @@ export default function PassportScreen() {
             <Feather name="globe" size={18} color="#fff" />
             <Text style={styles.passportBadgeText}>Passport Map</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.closeMapButton} onPress={() => router.push('/(tabs)')} activeOpacity={0.85}>
-            <Feather name="x" size={22} color="#183F4A" />
+          <TouchableOpacity
+            accessibilityLabel="Go to Home"
+            style={styles.homeMapButton}
+            onPress={() => router.push('/(tabs)')}
+            activeOpacity={0.85}
+          >
+            <Feather name="home" size={22} color="#183F4A" />
           </TouchableOpacity>
         </View>
       </View>
@@ -187,7 +192,7 @@ const styles = StyleSheet.create({
   mapHeader: { position: 'absolute', top: 56, left: 24, right: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   passportBadge: { minHeight: 58, borderRadius: 29, paddingHorizontal: 22, backgroundColor: '#163D47', flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#111827', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.14, shadowRadius: 22, elevation: 8 },
   passportBadgeText: { color: '#fff', fontSize: 20, fontFamily: 'Inter_700Bold' },
-  closeMapButton: { width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', shadowColor: '#111827', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 7 },
+  homeMapButton: { width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', shadowColor: '#111827', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 7 },
   sheet: { marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: CARD, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28, borderTopWidth: 1, borderColor: BORDER },
   handle: { width: 72, height: 8, borderRadius: 4, backgroundColor: '#DCE5ED', alignSelf: 'center', marginBottom: 24 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
