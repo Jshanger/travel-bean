@@ -4,24 +4,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
-import PaywallModal from '@/components/PaywallModal';
+import CreateBeanMascot from '@/components/CreateBeanMascot';
+import PremiumModal from '@/components/PremiumModal';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 const PRO_FEATURES = [
-  { icon: 'users' as const, label: 'Journey collaboration', body: 'Plan future Trips with friends.' },
-  { icon: 'share-2' as const, label: 'Shareable links', body: 'Send trips, passports, and stories beautifully.' },
-  { icon: 'file-text' as const, label: 'PDF trip export', body: 'Take your itinerary offline.' },
-  { icon: 'image' as const, label: 'Unlimited Memories', body: 'Save every photo, note, mood, and moment.' },
-  { icon: 'mic' as const, label: 'Voice-to-text notes', body: 'Talk your memories into Place.' },
-  { icon: 'map' as const, label: 'Full Passport', body: 'Countries, Cities, and travel progress.' },
+  { icon: 'globe' as const, label: 'Unlimited blog posts', body: 'Publish beyond your first 2 free posts.' },
+  { icon: 'edit-3' as const, label: 'Fully editable blog', body: 'Edit posts, drafts, photos, and settings on web.' },
+  { icon: 'link' as const, label: 'Public blog links', body: 'Share your blog and individual posts with readers.' },
+  { icon: 'repeat' as const, label: 'Unlimited Beans', body: 'Keep creating beyond the free monthly limit.' },
+  { icon: 'download-cloud' as const, label: 'HD export', body: 'Save sharper, cleaner memory cards.' },
 ];
 
 const MAGIC_TILES = [
-  { icon: 'globe' as const, title: 'Passport', body: 'Watch your world fill with countries, cities, and stories.', colors: ['#542CF4', '#18BBD4'] as const },
-  { icon: 'film' as const, title: 'Stories', body: 'Turn photos and reflections into shareable travel collages.', colors: ['#FF8A5B', '#542CF4'] as const },
-  { icon: 'coffee' as const, title: 'Places', body: 'Save cafes, viewpoints, hidden corners, and tiny details.', colors: ['#1EC8A5', '#49B8FF'] as const },
+  { icon: 'camera' as const, title: 'Create Beans', body: 'Save photos, places, and memories while you travel.', colors: ['#F26A2E', '#F6A35E'] as const },
+  { icon: 'map-pin' as const, title: 'Passport Map', body: 'See visited places and open memories from the map.', colors: ['#153A46', '#2D8F88'] as const },
+  { icon: 'globe' as const, title: 'Travel Blog', body: 'Turn Beans into editable posts and public links.', colors: ['#7DAF8C', '#E6B55E'] as const },
 ];
 
 export default function MoreScreen() {
@@ -61,51 +60,40 @@ export default function MoreScreen() {
       showsVerticalScrollIndicator={false}
     >
       <LinearGradient
-        colors={['#2500FF', '#542CF4', '#18BBD4']}
+        colors={['#FFF8EF', '#FFE7D6', '#EFFAF5']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.hero}
       >
-        <Svg width="100%" height="100%" viewBox="0 0 360 260" style={styles.heroArt}>
-          <Circle cx="296" cy="58" r="46" stroke="#FFFFFF" strokeWidth="1.6" opacity="0.2" fill="none" />
-          <Circle cx="296" cy="58" r="76" stroke="#FFFFFF" strokeWidth="1.4" opacity="0.12" fill="none" />
-          <Path d="M-18 210 C56 142 118 226 196 164 C254 118 302 146 380 96 L380 300 L-18 300 Z" fill="#FFFFFF" opacity="0.96" />
-          <Path d="M34 92 C84 48 132 86 186 52 C230 24 280 42 336 26" stroke="#FFFFFF" strokeWidth="2.2" strokeDasharray="5 9" opacity="0.42" fill="none" />
-          <Path d="M44 160 C92 124 140 152 188 120 C238 86 286 102 340 72" stroke="#F6C85F" strokeWidth="2.8" strokeLinecap="round" opacity="0.72" fill="none" />
-        </Svg>
-
         <View style={styles.heroTopRow}>
           <View style={styles.heroLogo}>
-            <View style={styles.beanMarkCore}>
-              <View style={styles.beanMarkShape} />
-              <View style={styles.beanMarkCut} />
-            </View>
+            <CreateBeanMascot size={64} frameless bubble="star" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroKicker}>{isPro ? 'Bean Pro is active' : 'Travel Bean'}</Text>
-            <Text style={styles.heroTitle}>Collect the places that made you feel alive</Text>
+            <Text style={styles.heroKicker}>{isPro ? 'Premium is active' : 'Settings'}</Text>
+            <Text style={styles.heroTitle}>Travel Bean</Text>
           </View>
           {user ? (
             <TouchableOpacity onPress={handleSignOut} style={styles.heroSignOut}>
-              <Feather name="log-out" size={16} color="#fff" />
+              <Feather name="log-out" size={16} color="#153A46" />
             </TouchableOpacity>
           ) : null}
         </View>
 
-        <Text style={styles.heroText}>Build your Passport, save Memories, and turn trip photos into beautiful stories worth sharing.</Text>
+        <Text style={styles.heroText}>Create Beans while you travel, then turn your best memories into a public Travel Bean Blog.</Text>
 
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>{isPro ? '∞' : '3'}</Text>
-            <Text style={styles.heroStatLabel}>Memories</Text>
+            <Text style={styles.heroStatValue}>{isPro ? '∞' : '10'}</Text>
+            <Text style={styles.heroStatLabel}>{isPro ? 'Beans' : 'Free Beans/mo'}</Text>
           </View>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>4</Text>
-            <Text style={styles.heroStatLabel}>Story themes</Text>
+            <Text style={styles.heroStatValue}>2</Text>
+            <Text style={styles.heroStatLabel}>Free blog posts</Text>
           </View>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>194</Text>
-            <Text style={styles.heroStatLabel}>Country atlas</Text>
+            <Text style={styles.heroStatValue}>Web</Text>
+            <Text style={styles.heroStatLabel}>Blog dashboard</Text>
           </View>
         </View>
 
@@ -115,12 +103,12 @@ export default function MoreScreen() {
             onPress={() => !isPro && setShowPaywall(true)}
             activeOpacity={0.9}
           >
-            <Text style={styles.heroPrimaryText}>{isPro ? 'All Pro magic unlocked' : 'Unlock Bean Pro'}</Text>
-            <Feather name={isPro ? 'check-circle' : 'arrow-right'} size={17} color="#11131D" />
+            <Text style={styles.heroPrimaryText}>{isPro ? 'Premium publishing unlocked' : 'Unlock publishing'}</Text>
+            <Feather name={isPro ? 'check-circle' : 'arrow-right'} size={17} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroPill}>
-            <Feather name="star" size={14} color="#F6C85F" />
-            <Text style={styles.heroPillText}>Made for memories</Text>
+            <Feather name="star" size={14} color="#F26A2E" />
+            <Text style={styles.heroPillText}>Made for travel stories</Text>
           </View>
         </View>
       </LinearGradient>
@@ -143,7 +131,7 @@ export default function MoreScreen() {
                 )}
               </View>
               <Text style={[styles.accountSub, { color: colors.mutedForeground }]}>
-                {isPro ? 'Bean Pro · Active' : 'Your Bean journal'}
+                {isPro ? 'Travel Bean Premium · Active' : 'Signed in to Travel Bean'}
               </Text>
             </View>
           </View>
@@ -193,19 +181,19 @@ export default function MoreScreen() {
       {/* Bean Pro card */}
       {isPro ? (
         <View style={[styles.proUnlockedCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <LinearGradient colors={['#7DAF8C', '#5BCF9A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.proActiveCard}>
+          <LinearGradient colors={['#153A46', '#2D8F88']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.proActiveCard}>
             <View style={styles.proActiveLeft}>
               <View style={styles.proActiveStar}>
                 <Feather name="star" size={18} color="#fff" />
               </View>
               <View>
-                <Text style={styles.proActiveTitle}>Your Bean Pro toolkit is open</Text>
-                <Text style={styles.proActiveSub}>Stories, exports, voice notes, sharing, and unlimited memories.</Text>
+                <Text style={styles.proActiveTitle}>Travel Bean Premium is open</Text>
+                <Text style={styles.proActiveSub}>Unlimited Beans, public blog publishing, editable posts, and HD exports.</Text>
               </View>
             </View>
             <Feather name="check-circle" size={22} color="rgba(255,255,255,0.9)" />
           </LinearGradient>
-          <Text style={[styles.unlockedTitle, { color: colors.foreground }]}>Unlocked Pro Magic</Text>
+          <Text style={[styles.unlockedTitle, { color: colors.foreground }]}>Premium publishing tools</Text>
           <View style={styles.unlockedGrid}>
             {PRO_FEATURES.map(f => (
               <View key={f.label} style={[styles.unlockedFeature, { backgroundColor: colors.muted }]}>
@@ -232,8 +220,8 @@ export default function MoreScreen() {
               <Feather name="star" size={20} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.upgradeTitle}>Bean Pro</Text>
-              <Text style={styles.upgradePrice}>$2.99 / month</Text>
+              <Text style={styles.upgradeTitle}>Travel Bean Premium</Text>
+              <Text style={styles.upgradePrice}>$6.99 / month · $49.99 / year</Text>
             </View>
             <View style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnTxt}>Upgrade</Text>
@@ -251,15 +239,15 @@ export default function MoreScreen() {
       )}
 
       {/* App branding */}
-      <LinearGradient colors={['#11131D', '#26283D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.beanCard}>
-        <Feather name="map-pin" size={24} color="rgba(255,255,255,0.9)" />
+      <LinearGradient colors={['#153A46', '#2D8F88']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.beanCard}>
+        <Feather name="map-pin" size={24} color="#FFE7D6" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.beanTitle}>Travel Bean feels better when it feels personal.</Text>
-          <Text style={styles.beanSub}>Collect Places, write Memories, and keep the story of where you have been.</Text>
+          <Text style={styles.beanTitle}>Your travel stories belong to you.</Text>
+          <Text style={styles.beanSub}>Create Beans on the go, publish only what you choose, and keep editing from the web dashboard.</Text>
         </View>
       </LinearGradient>
 
-      <PaywallModal visible={showPaywall} onClose={() => setShowPaywall(false)} />
+      <PremiumModal visible={showPaywall} mode="general" onClose={() => setShowPaywall(false)} />
     </ScrollView>
   );
 }
@@ -273,48 +261,44 @@ const styles = StyleSheet.create({
     padding: 20,
     overflow: 'hidden',
     marginBottom: 14,
-    shadowColor: '#2500FF',
+    borderWidth: 1,
+    borderColor: '#F1D7C5',
+    shadowColor: '#925C34',
     shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.12,
     shadowRadius: 26,
     elevation: 9,
   },
-  heroArt: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroLogo: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
+    width: 70,
+    height: 70,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  beanMarkCore: { width: 35, height: 35, borderRadius: 18, backgroundColor: '#EEF7FF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', transform: [{ rotate: '-12deg' }] },
-  beanMarkShape: { width: 28, height: 17, borderRadius: 15, backgroundColor: '#542CF4' },
-  beanMarkCut: { position: 'absolute', width: 24, height: 5, borderRadius: 6, backgroundColor: '#EEF7FF', transform: [{ rotate: '-18deg' }] },
-  heroKicker: { color: 'rgba(255,255,255,0.72)', fontSize: 11, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 1.1, marginBottom: 4 },
-  heroTitle: { color: '#fff', fontSize: 30, lineHeight: 34, fontFamily: 'Inter_700Bold', maxWidth: 620 },
-  heroText: { zIndex: 2, color: 'rgba(255,255,255,0.82)', fontSize: 15, lineHeight: 22, fontFamily: 'Inter_500Medium', marginTop: 18, maxWidth: 660 },
-  heroSignOut: { width: 42, height: 42, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.18)', alignItems: 'center', justifyContent: 'center' },
+  heroKicker: { color: '#F26A2E', fontSize: 11, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 1.1, marginBottom: 4 },
+  heroTitle: { color: '#2A1714', fontSize: 32, lineHeight: 36, fontFamily: 'Inter_700Bold', maxWidth: 620 },
+  heroText: { zIndex: 2, color: '#7B6258', fontSize: 16, lineHeight: 23, fontFamily: 'Inter_600SemiBold', marginTop: 18, maxWidth: 660 },
+  heroSignOut: { width: 42, height: 42, borderRadius: 16, backgroundColor: 'rgba(21,58,70,0.1)', alignItems: 'center', justifyContent: 'center' },
   heroStats: { zIndex: 2, flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 20 },
   heroStat: {
     minWidth: 104,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: '#FFFDF8',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: '#F1D7C5',
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  heroStatValue: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold' },
-  heroStatLabel: { color: 'rgba(255,255,255,0.72)', fontSize: 11, fontFamily: 'Inter_700Bold', marginTop: 2 },
+  heroStatValue: { color: '#153A46', fontSize: 24, fontFamily: 'Inter_700Bold' },
+  heroStatLabel: { color: '#7B6258', fontSize: 11, fontFamily: 'Inter_700Bold', marginTop: 2 },
   heroActions: { zIndex: 2, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 22 },
-  heroPrimary: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13 },
-  heroPrimaryText: { color: '#11131D', fontSize: 14, fontFamily: 'Inter_700Bold' },
-  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, backgroundColor: 'rgba(17,19,29,0.28)', paddingHorizontal: 13, paddingVertical: 11 },
-  heroPillText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_700Bold' },
+  heroPrimary: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F26A2E', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13 },
+  heroPrimaryText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
+  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, backgroundColor: '#FFFDF8', borderWidth: 1, borderColor: '#F1D7C5', paddingHorizontal: 13, paddingVertical: 11 },
+  heroPillText: { color: '#153A46', fontSize: 12, fontFamily: 'Inter_700Bold' },
 
   accountCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 22, borderWidth: 1, gap: 14, marginBottom: 14 },
   avatarCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
@@ -351,9 +335,9 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'flex-end',
     overflow: 'hidden',
-    shadowColor: '#2500FF',
+    shadowColor: '#925C34',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.13,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 5,
   },
