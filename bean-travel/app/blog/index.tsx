@@ -27,23 +27,47 @@ export default function PrivateBlogHome() {
   const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'failed' | 'signin'>('idle');
   const { isSignedIn } = useAuth();
   const { user } = useUser();
-  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink } = useApp();
+  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink, saveBlogSettings } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
 
-  async function shareBlog() {
+  async function ensurePublicBlogSettings() {
     if (!blogUrl) {
       Alert.alert('Set your blog username', 'Choose a username before sharing your public blog link.');
+      return null;
+    }
+    if (!isSignedIn) {
+      setDashboardLinkStatus('signin');
+      Alert.alert('Sign in first', 'Sign in so Travel Bean can publish your blog to the cloud for readers.');
+      return null;
+    }
+    try {
+      return await saveBlogSettings({ privacy: 'public' });
+    } catch {
+      Alert.alert('Could not publish blog', 'Please try again once you are online.');
+      return null;
+    }
+  }
+
+  async function shareBlog() {
+    const publicSettings = await ensurePublicBlogSettings();
+    if (!publicSettings) {
       return;
     }
     const result = await sharePublicLink({
-      url: blogUrl,
-      title: blogSettings.title || 'Travel Bean Blog',
-      text: blogSettings.intro,
+      url: publicBlogUrl(publicSettings),
+      title: publicSettings.title || 'Travel Bean Blog',
+      text: publicSettings.intro,
     });
     if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
+  }
+
+  async function viewPublicBlog() {
+    const publicSettings = await ensurePublicBlogSettings();
+    if (!publicSettings) return;
+    router.push(blogPath(publicSettings) as any);
   }
 
   async function sharePost(post: BlogPost) {
@@ -148,7 +172,7 @@ export default function PrivateBlogHome() {
               <Text style={styles.primaryText}>Share Public Blog</Text>
             </TouchableOpacity>
             {blogUrl ? (
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(blogPath(blogSettings) as any)} activeOpacity={0.86}>
+              <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
                 <Feather name="external-link" size={16} color={ORANGE} />
                 <Text style={styles.secondaryText}>View Public Blog</Text>
               </TouchableOpacity>
