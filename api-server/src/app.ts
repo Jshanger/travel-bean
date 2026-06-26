@@ -73,7 +73,7 @@ function findWebDistDir() {
 const webDistDir = findWebDistDir();
 
 if (webDistDir) {
-  app.use(express.static(webDistDir));
+  app.use(express.static(webDistDir, { dotfiles: "allow" }));
 
   app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(webDistDir, "index.html"));
