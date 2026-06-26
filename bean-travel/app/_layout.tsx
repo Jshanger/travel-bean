@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -23,7 +24,8 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 const queryClient = new QueryClient();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+const configuredProxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+const proxyUrl = Platform.OS === "web" ? undefined : configuredProxyUrl;
 
 function RootLayoutNav() {
   return (

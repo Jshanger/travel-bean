@@ -8,7 +8,7 @@
     "typecheck:app": "pnpm --dir bean-travel typecheck",
     "typecheck:api": "pnpm --dir api-server typecheck",
     "build:api": "pnpm --dir api-server build",
-    "build:web": "pnpm --dir bean-travel exec expo export --platform web --output-dir dist --clear",
+    "build:web": "EXPO_PUBLIC_DOMAIN=${EXPO_PUBLIC_DOMAIN:-travel-bean-production.up.railway.app} EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=${EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY:-$CLERK_PUBLISHABLE_KEY} EXPO_PUBLIC_CLERK_PROXY_URL=${EXPO_PUBLIC_CLERK_PROXY_URL:-} pnpm --dir bean-travel exec expo export --platform web --output-dir dist --clear",
     "build:deploy": "pnpm run build:web && pnpm run build:api",
     "db:push": "pnpm --dir lib-db run push",
     "start": "pnpm --dir api-server start",
