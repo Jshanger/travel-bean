@@ -61,25 +61,35 @@ export default function BlogEditorScreen() {
 
   async function publish() {
     if (!draft) return;
+    const draftToPublish = draft;
     if (!blogSettings.username) {
-      router.push({ pathname: '/blog/settings', params: { sourcePlaceId: draft.sourcePlaceId } } as any);
+      router.push({ pathname: '/blog/settings', params: { sourcePlaceId: draftToPublish.sourcePlaceId } } as any);
       return;
     }
+    async function publishCurrentDraft() {
+      setSaving(true);
+      try {
+        await editBlogPost(draftToPublish.id, draftToPublish);
+        const published = await publishBlogPostById(draftToPublish.id, draftToPublish);
+        if (published) {
+          setDraft(published);
+          Alert.alert('Published', 'Your post is live on your public Travel Bean Blog.');
+        }
+      } catch (error: any) {
+        Alert.alert('Could not publish publicly', error?.message ?? 'Please sign in and try again once you are online.');
+      } finally {
+        setSaving(false);
+      }
+    }
     if (Platform.OS === 'web') {
-      await editBlogPost(draft.id, draft);
-      const published = await publishBlogPostById(draft.id);
-      if (published) setDraft(published);
+      await publishCurrentDraft();
       return;
     }
     Alert.alert('Publish this post?', 'This will make the post visible on your public Travel Bean Blog.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Publish',
-        onPress: async () => {
-          await editBlogPost(draft.id, draft);
-          const published = await publishBlogPostById(draft.id);
-          if (published) setDraft(published);
-        },
+        onPress: publishCurrentDraft,
       },
     ]);
   }
