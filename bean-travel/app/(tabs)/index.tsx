@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -23,6 +24,7 @@ const BORDER = '#F1D7C5';
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isSignedIn } = useAuth();
   const { places, blogPosts, isPremium, canCreateBean, freeBeansRemaining } = useApp();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [premiumMode, setPremiumMode] = useState<'general' | 'limit'>('general');
@@ -56,8 +58,15 @@ export default function HomeScreen() {
     } as any);
   }
 
-  function openTravelBlog() {
-    router.push('/blog' as any);
+  function openDashboardAccess() {
+    if (isSignedIn) {
+      router.push('/blog' as any);
+      return;
+    }
+    router.push({
+      pathname: '/sign-in',
+      params: { redirect: '/blog' },
+    } as any);
   }
 
   return (
@@ -75,9 +84,17 @@ export default function HomeScreen() {
           <Feather name="plus" size={32} color="#fff" />
           <Text style={styles.primaryText}>Create a Bean</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.blogButton} onPress={openTravelBlog} activeOpacity={0.86}>
-          <Feather name="globe" size={21} color={ORANGE} />
-          <Text style={styles.blogButtonText}>Blog Dashboard</Text>
+        <TouchableOpacity style={styles.dashboardButton} onPress={openDashboardAccess} activeOpacity={0.86}>
+          <View style={styles.dashboardButtonIcon}>
+            <Feather name={isSignedIn ? 'layout' : 'log-in'} size={22} color={ORANGE} />
+          </View>
+          <View style={styles.dashboardButtonCopy}>
+            <Text style={styles.dashboardButtonText}>{isSignedIn ? 'Open Blog Dashboard' : 'Sign in for Blog Dashboard'}</Text>
+            <Text style={styles.dashboardButtonSub}>
+              {isSignedIn ? 'Edit drafts, publish posts, and manage your public blog.' : 'Sync your Beans and manage your blog from phone or laptop.'}
+            </Text>
+          </View>
+          <Feather name="arrow-right" size={22} color={INK} />
         </TouchableOpacity>
         <View style={[styles.sparkle, styles.sparkleLeft]} />
         <View style={[styles.sparkle, styles.sparkleRight]} />
@@ -295,8 +312,11 @@ const styles = StyleSheet.create({
   heroDecor: { position: 'absolute', left: 0, top: 0 },
   primaryButton: { alignSelf: 'center', width: '100%', maxWidth: 438, height: 78, borderRadius: 39, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingHorizontal: 22, marginTop: 16, shadowColor: '#D8491E', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.18, shadowRadius: 22, elevation: 6 },
   primaryText: { color: '#fff', fontSize: 25, fontFamily: 'Inter_700Bold' },
-  blogButton: { alignSelf: 'center', width: '100%', maxWidth: 438, height: 78, borderRadius: 39, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: 22, marginTop: 12 },
-  blogButtonText: { color: INK, fontSize: 21, fontFamily: 'Inter_700Bold' },
+  dashboardButton: { alignSelf: 'center', width: '100%', maxWidth: 438, minHeight: 92, borderRadius: 30, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13, marginTop: 12 },
+  dashboardButtonIcon: { width: 48, height: 48, borderRadius: 20, backgroundColor: '#FFF1E6', alignItems: 'center', justifyContent: 'center' },
+  dashboardButtonCopy: { flex: 1, minWidth: 0 },
+  dashboardButtonText: { color: INK, fontSize: 18, lineHeight: 23, fontFamily: 'Inter_700Bold' },
+  dashboardButtonSub: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', marginTop: 3 },
   sparkle: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: '#F4B66F' },
   sparkleLeft: { left: 64, top: 362 },
   sparkleRight: { right: 54, top: 432 },
