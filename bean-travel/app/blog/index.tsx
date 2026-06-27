@@ -27,7 +27,7 @@ export default function PrivateBlogHome() {
   const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'failed' | 'signin'>('idle');
   const { isSignedIn } = useAuth();
   const { user } = useUser();
-  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink, saveBlogSettings } = useApp();
+  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
@@ -53,9 +53,10 @@ export default function PrivateBlogHome() {
       return null;
     }
     try {
-      return await saveBlogSettings({ privacy: 'public' });
-    } catch {
-      Alert.alert('Could not publish blog', 'Please try again once you are online.');
+      const synced = await syncBlogToCloud();
+      return synced.settings;
+    } catch (error: any) {
+      Alert.alert('Could not publish blog', error?.message ?? 'Please try again once you are online.');
       return null;
     }
   }

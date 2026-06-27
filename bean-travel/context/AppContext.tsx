@@ -323,6 +323,7 @@ interface AppContextType {
   unpublishBlogPost: (id: string) => Promise<void>;
   deleteBlogPost: (id: string) => Promise<void>;
   getBlogPostById: (id: string) => BlogPost | undefined;
+  syncBlogToCloud: () => Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }>;
   emailDashboardLink: (email?: string) => Promise<void>;
   addItineraryItem: (tripId: string, item: Omit<ItineraryItem, 'id' | 'votes' | 'comments'>) => Promise<void>;
   editItineraryItem: (tripId: string, itemId: string, item: Partial<ItineraryItem>) => Promise<void>;
@@ -947,6 +948,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const getBlogPostById = useCallback((id: string) => blogPosts.find(post => post.id === id), [blogPosts]);
 
+  const syncBlogToCloud = useCallback(async () => {
+    if (!blogSettings.username) {
+      throw new Error('Choose a blog username before publishing.');
+    }
+    if (useLocalData) {
+      throw new Error('Sign in to publish your Travel Bean Blog for public readers.');
+    }
+    const token = await getToken();
+    const savedSettings = mapBlogSettings(await blogApiFetch('/settings', token, {
+      method: 'PUT',
+      body: JSON.stringify({ ...blogSettings, privacy: 'public' }),
+    }));
+    if (!savedSettings) {
+      throw new Error('Could not publish blog settings.');
+    }
+
+    const syncedPosts = await Promise.all(blogPosts.map(async post => {
+      let savedPost: BlogPost;
+      try {
+        savedPost = mapBlogPost(await blogApiFetch(`/posts/${encodeURIComponent(post.id)}`, token, {
+          method: 'PUT',
+          body: JSON.stringify(post),
+        }));
+      } catch {
+        savedPost = mapBlogPost(await blogApiFetch('/posts', token, {
+          method: 'POST',
+          body: JSON.stringify(post),
+        }));
+      }
+      if (post.status === 'published') {
+        return mapBlogPost(await blogApiFetch(`/posts/${encodeURIComponent(savedPost.id)}/publish`, token, {
+          method: 'POST',
+          body: JSON.stringify({ privacy: post.privacy === 'password' ? 'password' : 'public' }),
+        }));
+      }
+      return savedPost;
+    }));
+
+    await storeBlogSettings(savedSettings);
+    await storeBlogPosts(syncedPosts);
+    return { settings: savedSettings, posts: syncedPosts };
+  }, [blogPosts, blogSettings, getToken, storeBlogPosts, storeBlogSettings, useLocalData]);
+
   const emailDashboardLink = useCallback(async (email?: string) => {
     if (useLocalData) throw new Error('Cloud account is required');
     const token = await getToken();
@@ -1064,7 +1108,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addPlace, editPlace, deletePlace,
       addBucketItem, editBucketItem, deleteBucketItem,
       addTrip, editTrip, deleteTrip,
-      saveBlogSettings, createBlogDraftFromPlace, editBlogPost, publishBlogPostById, unpublishBlogPost, deleteBlogPost, getBlogPostById, emailDashboardLink,
+      saveBlogSettings, createBlogDraftFromPlace, editBlogPost, publishBlogPostById, unpublishBlogPost, deleteBlogPost, getBlogPostById, syncBlogToCloud, emailDashboardLink,
       addItineraryItem, editItineraryItem, deleteItineraryItem,
       addComment, voteOnItem,
       getTripById, getUniqueCountries,
