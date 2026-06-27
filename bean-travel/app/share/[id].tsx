@@ -116,7 +116,7 @@ export default function ShareScreen() {
         </Text>
         <TouchableOpacity
           style={{ backgroundColor: '#E8825A', borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14 }}
-          onPress={() => router.replace('/(auth)/sign-in')}
+          onPress={() => router.replace('/sign-in')}
         >
           <Text style={{ fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' }}>Sign in to Bean</Text>
         </TouchableOpacity>
