@@ -1,10 +1,6 @@
-import { Feather } from '@expo/vector-icons';
-import { useClerk, useSSO } from '@clerk/expo';
 import { useSignInLegacy } from '@/hooks/useClerkAuth';
-import * as AuthSession from 'expo-auth-session';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -13,8 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthBrandHero from '@/components/AuthBrandHero';
 import { useColors } from '@/hooks/useColors';
 
-WebBrowser.maybeCompleteAuthSession();
-
 type Screen = 'form' | 'otp';
 
 export default function SignInScreen() {
@@ -22,9 +16,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ redirect?: string | string[] }>();
-  const clerk = useClerk() as any;
   const { signIn, setActive, isLoaded } = useSignInLegacy();
-  const { startSSOFlow } = useSSO();
 
   const [screen, setScreen] = useState<Screen>('form');
   const [email, setEmail] = useState('');
@@ -34,14 +26,19 @@ export default function SignInScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const redirectTo = normalizeRedirect(params.redirect);
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    WebBrowser.warmUpAsync();
-    return () => { WebBrowser.coolDownAsync(); };
-  }, []);
-
   async function handleSignIn() {
-    if (!isLoaded || !signIn) return;
+    if (!email.trim()) {
+      setErrorMsg('Enter your email address to sign in.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Enter your password to sign in.');
+      return;
+    }
+    if (!isLoaded || !signIn) {
+      setErrorMsg('Sign in is still loading. Please try again in a moment.');
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -81,7 +78,7 @@ export default function SignInScreen() {
         });
         setScreen('otp');
       } else if (hasGoogleOnly) {
-        setErrorMsg('This account uses Google sign-in. Please tap "Continue with Google" above.');
+        setErrorMsg('Google sign-in is temporarily unavailable. Please use an email and password account for now.');
       } else {
         setErrorMsg('Unable to sign in. Please check your credentials or sign up.');
       }
@@ -98,7 +95,14 @@ export default function SignInScreen() {
   }
 
   async function handleVerify() {
-    if (!isLoaded || !signIn) return;
+    if (!verifyCode) {
+      setErrorMsg('Enter the verification code from your email.');
+      return;
+    }
+    if (!isLoaded || !signIn) {
+      setErrorMsg('Verification is still loading. Please try again in a moment.');
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -120,53 +124,6 @@ export default function SignInScreen() {
       setLoading(false);
     }
   }
-
-  const handleGoogle = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      if (Platform.OS === 'web') {
-        if (signIn?.authenticateWithRedirect) {
-          await signIn.authenticateWithRedirect({
-            strategy: 'oauth_google',
-            redirectUrl: buildWebUrl('/sso-callback'),
-            redirectUrlComplete: redirectTo,
-            continueSignIn: true,
-            continueSignUp: true,
-          });
-          return;
-        }
-
-        if (clerk?.redirectToSignIn) {
-          await clerk.redirectToSignIn({
-            signInForceRedirectUrl: redirectTo,
-            signInFallbackRedirectUrl: redirectTo,
-            signUpForceRedirectUrl: redirectTo,
-            signUpFallbackRedirectUrl: redirectTo,
-            initialValues: email ? { emailAddress: email } : undefined,
-          });
-          return;
-        }
-
-        setErrorMsg('Sign in is still loading. Please refresh and try again.');
-        return;
-      }
-
-      const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
-        strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
-      });
-      if (createdSessionId && setSSOActive) {
-        await setSSOActive({ session: createdSessionId });
-        router.replace(redirectTo as any);
-      }
-    } catch (e: any) {
-      const msg = e?.errors?.[0]?.longMessage ?? e?.message ?? 'Google sign-in failed.';
-      if (!msg.includes('Another web browser')) setErrorMsg(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [clerk, email, signIn, startSSOFlow, router, redirectTo]);
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -197,9 +154,9 @@ export default function SignInScreen() {
           />
           {errorMsg ? <Text style={styles.err}>{errorMsg}</Text> : null}
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: (!verifyCode || loading) ? 0.6 : 1 }]}
+            style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
             onPress={handleVerify}
-            disabled={!verifyCode || loading}
+            disabled={loading}
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnTxt}>Verify</Text>}
           </TouchableOpacity>
@@ -226,23 +183,7 @@ export default function SignInScreen() {
         </View>
         <View style={styles.inner}>
         <Text style={[styles.title, { color: colors.foreground }]}>Welcome back</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Sign in to your travel journal</Text>
-
-        <TouchableOpacity
-          style={[styles.googleBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={handleGoogle}
-          activeOpacity={0.8}
-          disabled={loading}
-        >
-          <Feather name="globe" size={18} color={colors.foreground} />
-          <Text style={[styles.googleBtnTxt, { color: colors.foreground }]}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerTxt, { color: colors.mutedForeground }]}>or</Text>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-        </View>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Sign in with your email to manage your Beans and blog.</Text>
 
         <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
         <TextInput
@@ -270,9 +211,9 @@ export default function SignInScreen() {
         {errorMsg ? <Text style={styles.err}>{errorMsg}</Text> : null}
 
         <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: (!email || !password || loading) ? 0.6 : 1 }]}
+          style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
           onPress={handleSignIn}
-          disabled={!email || !password || loading}
+          disabled={loading}
           activeOpacity={0.85}
         >
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnTxt}>Sign in</Text>}
@@ -297,29 +238,12 @@ function normalizeRedirect(value?: string | string[]) {
   return next;
 }
 
-function buildWebUrl(path: string) {
-  const origin =
-    typeof globalThis !== 'undefined'
-      ? ((globalThis as any).location?.origin as string | undefined)
-      : undefined;
-  return origin ? `${origin}${path}` : path;
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingBottom: 42 },
   inner: { paddingHorizontal: 28, paddingTop: 26, paddingBottom: 40 },
   title: { fontSize: 30, fontFamily: 'Inter_700Bold', textAlign: 'left', marginBottom: 6 },
   subtitle: { fontSize: 16, lineHeight: 23, fontFamily: 'Inter_500Medium', textAlign: 'left', marginBottom: 24 },
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    padding: 16, borderRadius: 22, borderWidth: 1, marginBottom: 20,
-    shadowColor: '#542CF4', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
-  },
-  googleBtnTxt: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerTxt: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   label: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 7 },
   input: { borderWidth: 1, borderRadius: 18, padding: 16, fontSize: 15, fontFamily: 'Inter_500Medium', marginBottom: 15 },
   err: { fontSize: 12, color: '#E05252', marginBottom: 10, fontFamily: 'Inter_400Regular' },

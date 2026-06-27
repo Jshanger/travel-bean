@@ -1,10 +1,6 @@
-import { Feather } from '@expo/vector-icons';
-import { useClerk, useSSO } from '@clerk/expo';
 import { useSignUpLegacy } from '@/hooks/useClerkAuth';
-import * as AuthSession from 'expo-auth-session';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
@@ -13,15 +9,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthBrandHero from '@/components/AuthBrandHero';
 import { useColors } from '@/hooks/useColors';
 
-WebBrowser.maybeCompleteAuthSession();
-
 export default function SignUpScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const clerk = useClerk() as any;
   const { signUp, setActive, isLoaded } = useSignUpLegacy();
-  const { startSSOFlow } = useSSO();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,14 +21,19 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    WebBrowser.warmUpAsync();
-    return () => { WebBrowser.coolDownAsync(); };
-  }, []);
-
   async function handleSignUp() {
-    if (!isLoaded || !signUp) return;
+    if (!email.trim()) {
+      setErrorMsg('Enter your email address to create an account.');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('Enter a password to create an account.');
+      return;
+    }
+    if (!isLoaded || !signUp) {
+      setErrorMsg('Sign up is still loading. Please try again in a moment.');
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -51,7 +48,14 @@ export default function SignUpScreen() {
   }
 
   async function handleVerify() {
-    if (!isLoaded || !signUp) return;
+    if (!code) {
+      setErrorMsg('Enter the verification code from your email.');
+      return;
+    }
+    if (!isLoaded || !signUp) {
+      setErrorMsg('Verification is still loading. Please try again in a moment.');
+      return;
+    }
     setLoading(true);
     setErrorMsg('');
     try {
@@ -67,53 +71,6 @@ export default function SignUpScreen() {
       setLoading(false);
     }
   }
-
-  const handleGoogle = useCallback(async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      if (Platform.OS === 'web') {
-        if (signUp?.authenticateWithRedirect) {
-          await signUp.authenticateWithRedirect({
-            strategy: 'oauth_google',
-            redirectUrl: buildWebUrl('/sso-callback'),
-            redirectUrlComplete: '/',
-            continueSignIn: true,
-            continueSignUp: true,
-          });
-          return;
-        }
-
-        if (clerk?.redirectToSignUp) {
-          await clerk.redirectToSignUp({
-            signUpForceRedirectUrl: '/',
-            signUpFallbackRedirectUrl: '/',
-            signInForceRedirectUrl: '/',
-            signInFallbackRedirectUrl: '/',
-            initialValues: email ? { emailAddress: email } : undefined,
-          });
-          return;
-        }
-
-        setErrorMsg('Sign up is still loading. Please refresh and try again.');
-        return;
-      }
-
-      const { createdSessionId, setActive: setSSOActive } = await startSSOFlow({
-        strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
-      });
-      if (createdSessionId && setSSOActive) {
-        await setSSOActive({ session: createdSessionId });
-        router.replace('/(tabs)');
-      }
-    } catch (e: any) {
-      const msg = e?.errors?.[0]?.longMessage ?? e?.message ?? 'Google sign-in failed.';
-      if (!msg.includes('Another web browser')) setErrorMsg(msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [clerk, email, signUp, startSSOFlow, router]);
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
 
@@ -141,9 +98,9 @@ export default function SignUpScreen() {
           />
           {errorMsg ? <Text style={styles.err}>{errorMsg}</Text> : null}
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: (!code || loading) ? 0.6 : 1 }]}
+            style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
             onPress={handleVerify}
-            disabled={!code || loading}
+            disabled={loading}
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnTxt}>Verify email</Text>}
           </TouchableOpacity>
@@ -163,18 +120,7 @@ export default function SignUpScreen() {
         </View>
         <View style={styles.inner}>
         <Text style={[styles.title, { color: colors.foreground }]}>Create account</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Start mapping your travels</Text>
-
-        <TouchableOpacity style={[styles.googleBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleGoogle} activeOpacity={0.8} disabled={loading}>
-          <Feather name="globe" size={18} color={colors.foreground} />
-          <Text style={[styles.googleBtnTxt, { color: colors.foreground }]}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerTxt, { color: colors.mutedForeground }]}>or</Text>
-          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-        </View>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Use your email to save Beans and publish your Travel Bean Blog.</Text>
 
         <Text style={[styles.label, { color: colors.foreground }]}>Email</Text>
         <TextInput
@@ -202,9 +148,9 @@ export default function SignUpScreen() {
         {errorMsg ? <Text style={styles.err}>{errorMsg}</Text> : null}
 
         <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: (!email || !password || loading) ? 0.6 : 1 }]}
+          style={[styles.primaryBtn, { backgroundColor: colors.primary, opacity: loading ? 0.6 : 1 }]}
           onPress={handleSignUp}
-          disabled={!email || !password || loading}
+          disabled={loading}
           activeOpacity={0.85}
         >
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnTxt}>Create account</Text>}
@@ -222,29 +168,12 @@ export default function SignUpScreen() {
   );
 }
 
-function buildWebUrl(path: string) {
-  const origin =
-    typeof globalThis !== 'undefined'
-      ? ((globalThis as any).location?.origin as string | undefined)
-      : undefined;
-  return origin ? `${origin}${path}` : path;
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingBottom: 42 },
   inner: { paddingHorizontal: 28, paddingTop: 26, paddingBottom: 40 },
   title: { fontSize: 30, fontFamily: 'Inter_700Bold', textAlign: 'left', marginBottom: 6 },
   subtitle: { fontSize: 16, lineHeight: 23, fontFamily: 'Inter_500Medium', textAlign: 'left', marginBottom: 24 },
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    padding: 16, borderRadius: 22, borderWidth: 1, marginBottom: 20,
-    shadowColor: '#542CF4', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
-  },
-  googleBtnTxt: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerTxt: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   label: { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 7 },
   input: { borderWidth: 1, borderRadius: 18, padding: 16, fontSize: 15, fontFamily: 'Inter_500Medium', marginBottom: 15 },
   err: { fontSize: 12, color: '#E05252', marginBottom: 10, fontFamily: 'Inter_400Regular' },
