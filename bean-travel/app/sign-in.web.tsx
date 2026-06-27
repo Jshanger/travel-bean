@@ -11,8 +11,40 @@ import { useColors } from '@/hooks/useColors';
 
 type Screen = 'form' | 'otp';
 
+const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default function WebSignInScreen() {
+  if (!clerkConfigured) {
+    return <AuthSetupMissing />;
+  }
+
   return <WebSignInInner />;
+}
+
+function AuthSetupMissing() {
+  const colors = useColors();
+  const router = useRouter();
+
+  return (
+    <ScrollView style={[styles.root, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
+      <View style={{ paddingTop: 67 }}>
+        <AuthBrandHero variant="signin" />
+      </View>
+      <View style={styles.inner}>
+        <Text style={[styles.title, { color: colors.foreground }]}>Web sign-in needs setup</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          Travel Bean still works in the app. Add the Clerk publishable key in Railway to enable laptop sign-in.
+        </Text>
+        <TouchableOpacity
+          style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+          onPress={() => router.replace('/blog' as any)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryBtnTxt}>Back to Blog Dashboard</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
 }
 
 function WebSignInInner() {

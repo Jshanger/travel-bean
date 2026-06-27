@@ -4,11 +4,15 @@ import React from "react";
 
 type Props = {
   children: React.ReactNode;
-  publishableKey: string;
+  publishableKey?: string;
   proxyUrl?: string;
 };
 
 export function TravelClerkProvider({ children, publishableKey, proxyUrl }: Props) {
+  if (!publishableKey) {
+    return <>{children}</>;
+  }
+
   return (
     <ClerkProvider
       publishableKey={publishableKey}

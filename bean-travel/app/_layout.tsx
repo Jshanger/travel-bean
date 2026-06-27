@@ -23,7 +23,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const queryClient = new QueryClient();
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const configuredProxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 const proxyUrl = Platform.OS === "web" ? undefined : configuredProxyUrl;
 
