@@ -31,9 +31,7 @@ export default function PrivateBlogHome() {
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
-  const publicReaderLinkText = isSignedIn
-    ? (blogUrl || 'Choose a username to create your public link')
-    : 'Sign in to publish your blog link to the cloud';
+  const publicReaderLinkText = blogUrl || 'Choose a username to create your public link';
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
   const bottomNavHeight = 76 + Math.max(insets.bottom, 10);
 
@@ -147,84 +145,56 @@ export default function PrivateBlogHome() {
           </View>
         </View>
 
-      {!isSignedIn ? (
-        <View style={styles.notice}>
-          <Feather name="lock" size={18} color={ORANGE} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.noticeTitle}>Sign in to use your private dashboard</Text>
-            <Text style={styles.noticeText}>Readers see your public blog. Editing, drafts, and publishing stay here after you sign in.</Text>
+      <View style={styles.dashboardTools}>
+        <View style={styles.dashboardToolCard}>
+          <View style={styles.dashboardToolIcon}>
+            <Feather name="eye" size={17} color={ORANGE} />
           </View>
-          <TouchableOpacity style={styles.noticeButton} onPress={goSignIn} activeOpacity={0.86}>
-            <Text style={styles.noticeButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      <View style={styles.heroCard}>
-        <View style={styles.heroIcon}>
-          <Feather name="layout" size={24} color="#fff" />
-        </View>
-        <Text style={styles.heroTitle}>Private Blog Dashboard</Text>
-        <Text style={styles.heroText}>Only you can see this area. Manage drafts, published posts, settings, and laptop access from one place.</Text>
-
-        <View style={styles.publicLinkPanel}>
-          <View style={styles.panelTitleRow}>
-            <View style={styles.publicPanelIcon}>
-              <Feather name="eye" size={16} color={ORANGE} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.panelTitle}>Public Travel Bean Blog</Text>
-              <Text style={styles.panelText}>
-                {isSignedIn
-                  ? 'This is the reader-facing blog link. Other people use it to see your published posts.'
-                  : 'Sign in to publish your reader-facing blog link to the cloud.'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.linkLabel}>Public reader link</Text>
-          <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
-              <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
-              <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Sign In to Publish'}</Text>
-            </TouchableOpacity>
-            {blogUrl && isSignedIn ? (
-              <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
-                <Feather name="external-link" size={16} color={ORANGE} />
-                <Text style={styles.secondaryText}>View Reader Blog</Text>
+          <View style={styles.dashboardToolCopy}>
+            <Text style={styles.dashboardToolTitle}>Public reader blog</Text>
+            <Text style={styles.dashboardToolText}>This is the link other people use to read your published posts.</Text>
+            <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
+                <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
+                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Publish / Sign In'}</Text>
               </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.webManageCard}>
-          <View style={styles.webManageIcon}>
-            <Feather name="monitor" size={18} color="#153A46" />
-          </View>
-          <View style={styles.webManageCopy}>
-            <Text style={styles.webManageTitle}>Edit on laptop</Text>
-            <Text style={styles.webManageText}>Send yourself a secure dashboard link for writing longer posts and managing drafts on a larger screen.</Text>
-            <View style={styles.dashboardActionRow}>
+              {blogUrl && isSignedIn ? (
+                <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
+                  <Feather name="external-link" size={16} color={ORANGE} />
+                  <Text style={styles.secondaryText}>View Reader Blog</Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/blog/settings' as any)} activeOpacity={0.86}>
                 <Feather name="settings" size={16} color={ORANGE} />
-                <Text style={styles.secondaryText}>Blog Settings</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dashboardPrimaryButton, emailingDashboardLink && styles.disabledButton]}
-                onPress={sendDashboardLink}
-                activeOpacity={0.86}
-                disabled={emailingDashboardLink}
-              >
-                {emailingDashboardLink ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Feather name="mail" size={16} color="#fff" />
-                    <Text style={styles.dashboardPrimaryText}>Email Laptop Link</Text>
-                  </>
-                )}
+                <Text style={styles.secondaryText}>Settings</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.dashboardToolCard}>
+          <View style={[styles.dashboardToolIcon, styles.laptopIcon]}>
+            <Feather name="monitor" size={17} color="#153A46" />
+          </View>
+          <View style={styles.dashboardToolCopy}>
+            <Text style={styles.dashboardToolTitle}>Edit on laptop</Text>
+            <Text style={styles.dashboardToolText}>Send yourself a dashboard link for writing longer posts on a larger screen.</Text>
+            <TouchableOpacity
+              style={[styles.dashboardPrimaryButton, emailingDashboardLink && styles.disabledButton]}
+              onPress={sendDashboardLink}
+              activeOpacity={0.86}
+              disabled={emailingDashboardLink}
+            >
+              {emailingDashboardLink ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Feather name="mail" size={16} color="#fff" />
+                  <Text style={styles.dashboardPrimaryText}>Email Laptop Link</Text>
+                </>
+              )}
+            </TouchableOpacity>
             {dashboardLinkStatus !== 'idle' ? (
               <Text style={[
                 styles.webManageStatus,
@@ -452,13 +422,20 @@ const styles = StyleSheet.create({
   secondaryButton: { minHeight: 42, borderRadius: 21, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   secondaryText: { color: ORANGE, fontSize: 14, fontFamily: 'Inter_700Bold' },
   disabledButton: { opacity: 0.7 },
+  dashboardTools: { gap: 12 },
+  dashboardToolCard: { borderRadius: 22, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  dashboardToolIcon: { width: 42, height: 42, borderRadius: 18, backgroundColor: '#FFE7D6', alignItems: 'center', justifyContent: 'center' },
+  laptopIcon: { backgroundColor: '#CBEDE1' },
+  dashboardToolCopy: { flex: 1, minWidth: 0 },
+  dashboardToolTitle: { color: INK, fontSize: 16, fontFamily: 'Inter_700Bold' },
+  dashboardToolText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 3 },
   webManageCard: { marginTop: 14, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: '#88C9BA', backgroundColor: '#EFFAF5', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
   webManageIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#CBEDE1', alignItems: 'center', justifyContent: 'center' },
   webManageCopy: { flex: 1 },
   webManageTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
   webManageText: { color: MUTED, fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 3 },
   dashboardActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
-  dashboardPrimaryButton: { minHeight: 42, borderRadius: 21, backgroundColor: '#153A46', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dashboardPrimaryButton: { minHeight: 42, borderRadius: 21, backgroundColor: '#153A46', paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 12 },
   dashboardPrimaryText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   webManageStatus: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_700Bold', marginTop: 8 },
   webManageStatusSent: { color: '#287451' },
