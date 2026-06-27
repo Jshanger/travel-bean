@@ -61,6 +61,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.3",
     "@react-native-community/datetimepicker": "8.4.4",
     "expo-av": "~16.0.8",
     "expo-file-system": "~19.0.23",
