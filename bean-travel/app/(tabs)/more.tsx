@@ -17,12 +17,6 @@ const PRO_FEATURES = [
   { icon: 'download-cloud' as const, label: 'HD export', body: 'Save sharper, cleaner memory cards.' },
 ];
 
-const MAGIC_TILES = [
-  { icon: 'camera' as const, title: 'Create Beans', body: 'Save photos, places, and memories while you travel.', colors: ['#F26A2E', '#F6A35E'] as const },
-  { icon: 'map-pin' as const, title: 'Passport Map', body: 'See visited places and open memories from the map.', colors: ['#153A46', '#2D8F88'] as const },
-  { icon: 'globe' as const, title: 'Travel Blog', body: 'Turn Beans into editable posts and public links.', colors: ['#7DAF8C', '#E6B55E'] as const },
-];
-
 export default function MoreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -88,8 +82,8 @@ export default function MoreScreen() {
             <Text style={styles.heroStatLabel}>{isPro ? 'Beans' : 'Free Beans/mo'}</Text>
           </View>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>2</Text>
-            <Text style={styles.heroStatLabel}>Free blog posts</Text>
+            <Text style={styles.heroStatValue}>{isPro ? '∞' : '2'}</Text>
+            <Text style={styles.heroStatLabel}>{isPro ? 'Blog posts' : 'Free blog posts'}</Text>
           </View>
           <View style={styles.heroStat}>
             <Text style={styles.heroStatValue}>Web</Text>
@@ -159,24 +153,6 @@ export default function MoreScreen() {
           </View>
         </>
       )}
-
-      <View style={styles.magicGrid}>
-        {MAGIC_TILES.map(tile => (
-          <LinearGradient
-            key={tile.title}
-            colors={tile.colors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.magicTile}
-          >
-            <View style={styles.magicIcon}>
-              <Feather name={tile.icon} size={18} color="#fff" />
-            </View>
-            <Text style={styles.magicTitle}>{tile.title}</Text>
-            <Text style={styles.magicText}>{tile.body}</Text>
-          </LinearGradient>
-        ))}
-      </View>
 
       {/* Bean Pro card */}
       {isPro ? (

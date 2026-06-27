@@ -52,6 +52,8 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
 
   const html = useMemo(() => {
     const markerCoords = spreadMarkerCoords(mapped);
+    const selectedIndex = selectedPlaceId ? mapped.findIndex(place => place.id === selectedPlaceId) : -1;
+    const selectedCoords = selectedIndex >= 0 ? markerCoords[selectedIndex] : null;
     const markersJs = mapped.map((p, index) => {
       const coords = markerCoords[index];
       const color = CATEGORY_COLORS[p.category] ?? '#E8825A';
@@ -319,7 +321,14 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
 
     ${markersJs}
 
-    ${mapped.length > 0 ? `
+    ${selectedCoords ? `
+    map.setView([${selectedCoords.latitude}, ${selectedCoords.longitude}], ${isHomePreview ? 4 : 6});
+    if (markerLookup[${JSON.stringify(selectedPlaceId)}]) {
+      setTimeout(function() {
+        markerLookup[${JSON.stringify(selectedPlaceId)}].bringToFront();
+      }, 120);
+    }
+    ` : mapped.length > 0 ? `
     var bounds = [${markerCoords.map(p => `[${p.latitude}, ${p.longitude}]`).join(',')}];
     if (bounds.length === 1) {
       map.setView(bounds[0], ${isHomePreview ? 4 : 3});
