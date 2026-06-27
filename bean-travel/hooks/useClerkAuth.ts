@@ -1,21 +1,9 @@
-import { useAuth, useClerk } from '@clerk/expo';
+import { useSignIn, useSignUp } from '@clerk/expo/legacy';
 
 export function useSignInLegacy() {
-  const { isLoaded } = useAuth();
-  const clerk = useClerk() as any;
-  return {
-    isLoaded,
-    signIn: isLoaded ? (clerk.client?.signIn ?? null) : undefined,
-    setActive: (params: { session: string | null }) => clerk.setActive(params),
-  };
+  return useSignIn();
 }
 
 export function useSignUpLegacy() {
-  const { isLoaded } = useAuth();
-  const clerk = useClerk() as any;
-  return {
-    isLoaded,
-    signUp: isLoaded ? (clerk.client?.signUp ?? null) : undefined,
-    setActive: (params: { session: string | null }) => clerk.setActive(params),
-  };
+  return useSignUp();
 }
