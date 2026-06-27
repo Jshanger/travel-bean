@@ -146,6 +146,24 @@ export default function PrivateBlogHome() {
           </View>
         </View>
 
+      {!isSignedIn ? (
+        <View style={styles.signInNotice}>
+          <View style={styles.signInNoticeIcon}>
+            <Feather name="lock" size={18} color={ORANGE} />
+          </View>
+          <View style={styles.signInNoticeCopy}>
+            <Text style={styles.signInNoticeTitle}>Sign in to publish publicly</Text>
+            <Text style={styles.signInNoticeText}>
+              Your published posts are saved on this device. Sign in to sync them to the public blog link for readers.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.signInNoticeButton} onPress={goSignIn} activeOpacity={0.86}>
+            <Feather name="log-in" size={16} color="#fff" />
+            <Text style={styles.signInNoticeButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       <View style={styles.dashboardTools}>
         <View style={styles.dashboardToolCard}>
           <View style={styles.dashboardToolIcon}>
@@ -153,12 +171,16 @@ export default function PrivateBlogHome() {
           </View>
           <View style={styles.dashboardToolCopy}>
             <Text style={styles.dashboardToolTitle}>Public reader blog</Text>
-            <Text style={styles.dashboardToolText}>This is the link other people use to read your published posts.</Text>
+            <Text style={styles.dashboardToolText}>
+              {isSignedIn
+                ? 'This is the link other people use to read your published posts.'
+                : 'Sign in to publish these posts to the cloud so readers can open this link.'}
+            </Text>
             <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
                 <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
-                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Publish / Sign In'}</Text>
+                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Sign In to Publish'}</Text>
               </TouchableOpacity>
               {blogUrl && isSignedIn ? (
                 <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
@@ -406,6 +428,13 @@ const styles = StyleSheet.create({
   noticeText: { color: MUTED, fontSize: 13, lineHeight: 19, fontFamily: 'Inter_500Medium', marginTop: 3 },
   noticeButton: { minHeight: 38, borderRadius: 19, backgroundColor: ORANGE, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   noticeButtonText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  signInNotice: { borderRadius: 22, borderWidth: 1, borderColor: '#F5B996', backgroundColor: '#FFF1E6', padding: 14, flexDirection: Platform.OS === 'web' ? 'row' : 'column', alignItems: Platform.OS === 'web' ? 'center' : 'stretch', gap: 12, marginBottom: 14 },
+  signInNoticeIcon: { width: 44, height: 44, borderRadius: 18, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
+  signInNoticeCopy: { flex: 1, minWidth: 0 },
+  signInNoticeTitle: { color: INK, fontSize: 16, fontFamily: 'Inter_700Bold' },
+  signInNoticeText: { color: MUTED, fontSize: 13, lineHeight: 19, fontFamily: 'Inter_600SemiBold', marginTop: 3 },
+  signInNoticeButton: { minHeight: 44, borderRadius: 22, backgroundColor: ORANGE, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: Platform.OS === 'web' ? 'auto' : 'flex-start' },
+  signInNoticeButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   heroCard: { borderRadius: 26, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 18 },
   heroIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   heroTitle: { color: INK, fontSize: 30, lineHeight: 36, fontFamily: 'Inter_700Bold' },
