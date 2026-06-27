@@ -1,12 +1,12 @@
-import { useClerk } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { useColors } from '@/hooks/useColors';
+import { useTravelClerk } from '@/hooks/useTravelAuth';
 
 export default function SsoCallbackScreen() {
-  const clerk = useClerk() as any;
+  const clerk = useTravelClerk() as any;
   const router = useRouter();
   const colors = useColors();
   const [errorMsg, setErrorMsg] = useState('');

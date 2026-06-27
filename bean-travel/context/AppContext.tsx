@@ -1,4 +1,3 @@
-import { useAuth, useUser } from '@clerk/expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { lookupCoords } from '@/constants/cityCoords';
@@ -7,6 +6,7 @@ import { BeanPhoto, BlogPost, BucketItem, BucketStatus, BucketTag, TravelBlogSet
 import { encodePersistedBeanNotes, hydratePersistedBean } from '@/utils/beanPersistence';
 import { defaultPremiumState, FREE_BLOG_POST_LIMIT, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
 import { createDefaultBlogSettings, generateBlogDraftFromBean, uniqueBlogSlug } from '@/utils/travelBlog';
+import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 
 function uid() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -337,8 +337,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { getToken, isSignedIn } = useAuth();
-  const { user } = useUser();
+  const { getToken, isSignedIn } = useTravelAuth();
+  const { user } = useTravelUser();
   const { isSubscribed, refetchCustomerInfo } = useSubscription();
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;

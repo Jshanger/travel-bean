@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +12,7 @@ import { BucketCard } from '@/components/BucketCard';
 import { CountrySearch } from '@/components/CountrySearch';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 import { BucketItem, BucketSource, BucketStatus, BucketTag } from '@/types';
 import { getDestinationInfo, inferCountryFromLocation } from '@/utils/destinationInfo';
 
@@ -182,7 +182,7 @@ function getApiBase(): string {
 export default function BucketScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { getToken } = useAuth();
+  const { getToken } = useTravelAuth();
   const { bucketItems, addBucketItem, editBucketItem, deleteBucketItem } = useApp();
 
   const [statusFilter, setStatusFilter] = useState<string>('All');

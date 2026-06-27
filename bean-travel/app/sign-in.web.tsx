@@ -1,4 +1,4 @@
-import { ClerkProvider, useSignIn } from '@clerk/clerk-react';
+import { useSignIn } from '@clerk/clerk-react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -11,14 +11,8 @@ import { useColors } from '@/hooks/useColors';
 
 type Screen = 'form' | 'otp';
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-
 export default function WebSignInScreen() {
-  return (
-    <ClerkProvider publishableKey={publishableKey}>
-      <WebSignInInner />
-    </ClerkProvider>
-  );
+  return <WebSignInInner />;
 }
 
 function WebSignInInner() {

@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useAuth, useUser } from '@clerk/expo';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -8,6 +7,7 @@ import CreateBeanMascot from '@/components/CreateBeanMascot';
 import PremiumModal from '@/components/PremiumModal';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 
 const PRO_FEATURES = [
   { icon: 'globe' as const, label: 'Unlimited blog posts', body: 'Publish beyond your first 2 free posts.' },
@@ -21,8 +21,8 @@ export default function MoreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { isPro, userProfile, updateMarketingConsent } = useApp();
-  const { signOut } = useAuth();
-  const { user } = useUser();
+  const { signOut } = useTravelAuth();
+  const { user } = useTravelUser();
   const [showPaywall, setShowPaywall] = useState(false);
   const [savingConsent, setSavingConsent] = useState(false);
 

@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useAuth } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -24,7 +23,6 @@ const BORDER = '#F1D7C5';
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isSignedIn } = useAuth();
   const { places, blogPosts, isPremium, canCreateBean, freeBeansRemaining } = useApp();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [premiumMode, setPremiumMode] = useState<'general' | 'limit'>('general');
@@ -59,14 +57,7 @@ export default function HomeScreen() {
   }
 
   function openDashboardAccess() {
-    if (isSignedIn) {
-      router.push('/blog' as any);
-      return;
-    }
-    router.push({
-      pathname: '/sign-in',
-      params: { redirect: '/blog' },
-    } as any);
+    router.push('/blog' as any);
   }
 
   return (
@@ -86,13 +77,11 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.dashboardButton} onPress={openDashboardAccess} activeOpacity={0.86}>
           <View style={styles.dashboardButtonIcon}>
-            <Feather name={isSignedIn ? 'layout' : 'log-in'} size={22} color={ORANGE} />
+            <Feather name="layout" size={22} color={ORANGE} />
           </View>
           <View style={styles.dashboardButtonCopy}>
-            <Text style={styles.dashboardButtonText}>{isSignedIn ? 'Open Blog Dashboard' : 'Sign in for Blog Dashboard'}</Text>
-            <Text style={styles.dashboardButtonSub}>
-              {isSignedIn ? 'Edit drafts, publish posts, and manage your public blog.' : 'Sync your Beans and manage your blog from phone or laptop.'}
-            </Text>
+            <Text style={styles.dashboardButtonText}>Open Blog Dashboard</Text>
+            <Text style={styles.dashboardButtonSub}>Edit drafts, publish posts, and manage your Travel Bean Blog.</Text>
           </View>
           <Feather name="arrow-right" size={22} color={INK} />
         </TouchableOpacity>

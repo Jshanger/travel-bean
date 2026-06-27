@@ -8,7 +8,6 @@ import {
   Alert, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView,
   StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useAuth } from '@clerk/expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CountrySearch } from '@/components/CountrySearch';
 import { DatePickerField } from '@/components/DatePickerField';
@@ -22,6 +21,7 @@ import PlacesMap from '@/components/PlacesMap';
 import WorldMapSVG from '@/components/WorldMapSVG';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 import { PlaceCategory, VisitedPlace } from '@/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ export default function PlacesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { places, addPlace, editPlace, deletePlace } = useApp();
-  const { getToken } = useAuth();
+  const { getToken } = useTravelAuth();
   const nameRef = useRef<TextInput>(null);
   const cityInputRef = useRef<TextInput>(null);
 

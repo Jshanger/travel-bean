@@ -4,9 +4,9 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Easing, StyleProp, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { useAuth } from '@clerk/expo';
 import { useColors } from '@/hooks/useColors';
 import { useApp } from '@/context/AppContext';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 
 const BASE_URL = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -34,7 +34,7 @@ export default function VoiceDictation({ onResult, style, size = 18, showLabel =
   const colors = useColors();
   const router = useRouter();
   const { isPro } = useApp();
-  const { getToken } = useAuth();
+  const { getToken } = useTravelAuth();
   const [isListening, setIsListening] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const recordingRef = useRef<Audio.Recording | null>(null);

@@ -1,1 +1,5 @@
-export { default } from './blog/index';
+import BlogDashboard from './blog/index';
+
+export default function WebDashboardScreen() {
+  return <BlogDashboard requireSignedIn />;
+}

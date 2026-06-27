@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -7,6 +6,7 @@ import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 import { ItineraryItem, TimeBlock, Trip } from '@/types';
 
 const TIME_BLOCKS: TimeBlock[] = ['Morning', 'Afternoon', 'Evening'];
@@ -35,7 +35,7 @@ export default function ShareScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { getTripById } = useApp();
-  const { isSignedIn, getToken } = useAuth();
+  const { isSignedIn, getToken } = useTravelAuth();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);

@@ -6,8 +6,6 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { Feather } from "@expo/vector-icons";
-import { ClerkProvider } from "@clerk/expo";
-import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -17,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TravelClerkProvider } from "@/components/TravelClerkProvider";
 import { AppProvider } from "@/context/AppContext";
 import { SubscriptionProvider } from "@/services/revenuecat";
 
@@ -69,9 +68,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary>
-          <ClerkProvider
+          <TravelClerkProvider
             publishableKey={publishableKey}
-            tokenCache={tokenCache}
             proxyUrl={proxyUrl}
           >
             <QueryClientProvider client={queryClient}>
@@ -81,7 +79,7 @@ export default function RootLayout() {
                 </AppProvider>
               </SubscriptionProvider>
             </QueryClientProvider>
-          </ClerkProvider>
+          </TravelClerkProvider>
         </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>

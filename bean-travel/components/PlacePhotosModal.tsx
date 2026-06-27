@@ -8,10 +8,10 @@ import {
   ActivityIndicator, Alert, Dimensions, Modal,
   Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useAuth } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 import { PlacePhoto, VisitedPlace } from '@/types';
 import CollageBuilderModal from './CollageBuilderModal';
 import VoiceDictation from './VoiceDictation';
@@ -60,7 +60,7 @@ interface Props {
 export default function PlacePhotosModal({ place, visible, onClose }: Props) {
   const colors = useColors();
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken } = useTravelAuth();
   const { isPro, editPlace } = useApp();
 
   const [photos, setPhotos] = useState<PlacePhoto[]>([]);

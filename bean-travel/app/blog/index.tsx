@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { useAuth, useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
@@ -7,6 +6,7 @@ import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, Touch
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumModal from '@/components/PremiumModal';
 import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
+import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 import type { BlogPost, VisitedPlace } from '@/types';
 import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, publicBlogUrl } from '@/utils/travelBlog';
@@ -19,24 +19,32 @@ const PAPER = '#FFF8EF';
 const CARD = '#FFFDF8';
 const BORDER = '#F1D7C5';
 
-export default function PrivateBlogHome() {
+type BlogDashboardProps = {
+  requireSignedIn?: boolean;
+};
+
+export default function BlogDashboard({ requireSignedIn = false }: BlogDashboardProps = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
   const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'failed' | 'signin'>('idle');
-  const { isSignedIn } = useAuth();
-  const { user } = useUser();
+  const { isSignedIn } = useTravelAuth();
+  const { user } = useTravelUser();
   const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
-  const publicReaderLinkText = blogUrl || 'Choose a username to create your public link';
+  const publicReaderLinkText = blogUrl
+    ? isSignedIn
+      ? blogUrl
+      : `${blogUrl} will go live after web sign-in and publish`
+    : 'Choose a username to create your public link';
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
   const bottomNavHeight = 76 + Math.max(insets.bottom, 10);
 
   function goSignIn() {
-    router.push({ pathname: '/sign-in', params: { redirect: '/blog' } } as any);
+    router.push({ pathname: '/sign-in', params: { redirect: '/dashboard' } } as any);
   }
 
   async function ensurePublicBlogSettings() {
@@ -46,9 +54,9 @@ export default function PrivateBlogHome() {
     }
     if (!isSignedIn) {
       setDashboardLinkStatus('signin');
-      Alert.alert('Sign in first', 'Sign in so Travel Bean can publish your blog to the cloud for readers.', [
+      Alert.alert('Publish from the web dashboard', 'Your app dashboard stays open. To make this blog public for readers, sign in on the web dashboard and publish it to the cloud.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: goSignIn },
+        { text: 'Open Web Sign In', onPress: goSignIn },
       ]);
       return null;
     }
@@ -80,11 +88,11 @@ export default function PrivateBlogHome() {
     router.push(blogPath(publicSettings) as any);
   }
 
-  async function sharePost(post: BlogPost) {
+  async function sharePost(post: BlogPost, settings: typeof blogSettings = blogSettings) {
     const result = await sharePublicLink({
-      url: publicBlogUrl(blogSettings, post),
+      url: publicBlogUrl(settings, post),
       title: post.title,
-      text: post.subtitle || blogSettings.title,
+      text: post.subtitle || settings.title,
     });
     if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
   }
@@ -93,7 +101,10 @@ export default function PrivateBlogHome() {
     setDashboardLinkStatus('idle');
     if (!isSignedIn) {
       setDashboardLinkStatus('signin');
-      goSignIn();
+      Alert.alert('Web sign-in needed', 'Sign in on the web dashboard first so Travel Bean knows which email address to send the laptop link to.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Web Sign In', onPress: goSignIn },
+      ]);
       return;
     }
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -132,6 +143,10 @@ export default function PrivateBlogHome() {
     }
   }
 
+  if (requireSignedIn && !isSignedIn) {
+    return <WebDashboardSignInGate onSignIn={goSignIn} onBack={() => router.replace('/blog' as any)} />;
+  }
+
   return (
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top, paddingBottom: bottomNavHeight + 44 }]}>
@@ -146,24 +161,6 @@ export default function PrivateBlogHome() {
           </View>
         </View>
 
-      {!isSignedIn ? (
-        <View style={styles.signInNotice}>
-          <View style={styles.signInNoticeIcon}>
-            <Feather name="lock" size={18} color={ORANGE} />
-          </View>
-          <View style={styles.signInNoticeCopy}>
-            <Text style={styles.signInNoticeTitle}>Sign in to publish publicly</Text>
-            <Text style={styles.signInNoticeText}>
-              Your published posts are saved on this device. Sign in to sync them to the public blog link for readers.
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.signInNoticeButton} onPress={goSignIn} activeOpacity={0.86}>
-            <Feather name="log-in" size={16} color="#fff" />
-            <Text style={styles.signInNoticeButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
       <View style={styles.dashboardTools}>
         <View style={styles.dashboardToolCard}>
           <View style={styles.dashboardToolIcon}>
@@ -174,13 +171,13 @@ export default function PrivateBlogHome() {
             <Text style={styles.dashboardToolText}>
               {isSignedIn
                 ? 'This is the link other people use to read your published posts.'
-                : 'Sign in to publish these posts to the cloud so readers can open this link.'}
+                : 'Create and edit here without signing in. Use the web dashboard when you are ready to make the reader link live.'}
             </Text>
             <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
-                <Feather name={isSignedIn ? 'share-2' : 'log-in'} size={16} color="#fff" />
-                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Sign In to Publish'}</Text>
+                <Feather name={isSignedIn ? 'share-2' : 'upload-cloud'} size={16} color="#fff" />
+                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Publish Online'}</Text>
               </TouchableOpacity>
               {blogUrl && isSignedIn ? (
                 <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
@@ -214,7 +211,7 @@ export default function PrivateBlogHome() {
               ) : (
                 <>
                   <Feather name="mail" size={16} color="#fff" />
-                  <Text style={styles.dashboardPrimaryText}>Email Laptop Link</Text>
+                  <Text style={styles.dashboardPrimaryText}>{isSignedIn ? 'Email Laptop Link' : 'Open Web Sign In'}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -253,8 +250,14 @@ export default function PrivateBlogHome() {
         empty="Published posts will appear here with share links."
         posts={publishedPosts}
         onEdit={post => router.push({ pathname: '/blog/editor/[id]', params: { id: post.id } } as any)}
-        onView={post => router.push(blogPath(blogSettings, post) as any)}
-        onShare={sharePost}
+        onView={async post => {
+          const publicSettings = await ensurePublicBlogSettings();
+          if (publicSettings) router.push(blogPath(publicSettings, post) as any);
+        }}
+        onShare={async post => {
+          const publicSettings = await ensurePublicBlogSettings();
+          if (publicSettings) await sharePost(post, publicSettings);
+        }}
       />
 
         <BeansLibrary
@@ -302,6 +305,33 @@ function BlogBottomNav({ bottomInset }: { bottomInset: number }) {
           <Text style={[styles.bottomNavLabel, tab.active && styles.bottomNavLabelActive]}>{tab.label}</Text>
         </TouchableOpacity>
       ))}
+    </View>
+  );
+}
+
+function WebDashboardSignInGate({ onSignIn, onBack }: { onSignIn: () => void; onBack: () => void }) {
+  return (
+    <View style={styles.webGateScreen}>
+      <View style={styles.webGateShell}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.86}>
+          <Feather name="chevron-left" size={23} color={INK} />
+          <Text style={styles.backButtonText}>Back to app</Text>
+        </TouchableOpacity>
+        <View style={styles.webGateCard}>
+          <View style={styles.webGateIcon}>
+            <Feather name="monitor" size={28} color="#153A46" />
+          </View>
+          <Text style={styles.webGateKicker}>Laptop dashboard</Text>
+          <Text style={styles.webGateTitle}>Sign in to manage your public blog on web.</Text>
+          <Text style={styles.webGateText}>
+            The phone app stays open for creating Beans. This web dashboard is where you sync drafts, publish reader links, and manage your Travel Bean Blog from a larger screen.
+          </Text>
+          <TouchableOpacity style={styles.webGateButton} onPress={onSignIn} activeOpacity={0.86}>
+            <Feather name="log-in" size={18} color="#fff" />
+            <Text style={styles.webGateButtonText}>Sign in to web dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -527,4 +557,13 @@ const styles = StyleSheet.create({
   },
   bottomNavLabel: { color: '#9E7B6B', fontSize: 11, fontFamily: 'Inter_600SemiBold', marginTop: 2 },
   bottomNavLabelActive: { color: ORANGE },
+  webGateScreen: { flex: 1, backgroundColor: PAPER, paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 44 : 64 },
+  webGateShell: { width: '100%', maxWidth: 720, alignSelf: 'center' },
+  webGateCard: { marginTop: 18, borderRadius: 28, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: Platform.OS === 'web' ? 30 : 22 },
+  webGateIcon: { width: 68, height: 68, borderRadius: 24, backgroundColor: '#CBEDE1', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  webGateKicker: { color: ORANGE, fontSize: 13, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', marginBottom: 8 },
+  webGateTitle: { color: INK, fontSize: Platform.OS === 'web' ? 34 : 28, lineHeight: Platform.OS === 'web' ? 40 : 34, fontFamily: 'Inter_700Bold' },
+  webGateText: { color: MUTED, fontSize: 16, lineHeight: 24, fontFamily: 'Inter_500Medium', marginTop: 12 },
+  webGateButton: { alignSelf: 'flex-start', minHeight: 50, borderRadius: 25, backgroundColor: ORANGE, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 22 },
+  webGateButtonText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
 });

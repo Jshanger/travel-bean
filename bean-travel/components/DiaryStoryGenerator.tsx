@@ -5,7 +5,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '@clerk/expo';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Dimensions, Modal, Platform, ScrollView,
@@ -14,6 +13,7 @@ import {
 import ViewShot from 'react-native-view-shot';
 import VoiceDictation from '@/components/VoiceDictation';
 import { useColors } from '@/hooks/useColors';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 import { Trip, VisitedPlace } from '@/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -251,7 +251,7 @@ function waitForFrame(ms = 160) {
 
 export default function DiaryStoryGenerator({ visible, trip, storySource, places, onClose }: Props) {
   const colors = useColors();
-  const { getToken } = useAuth();
+  const { getToken } = useTravelAuth();
   const shotRef = useRef<any>(null);
   const source = storySource ?? {
     id: trip?.id ?? 'place-beans',

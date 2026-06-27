@@ -1,4 +1,4 @@
-import { ClerkProvider, useSignUp } from '@clerk/clerk-react';
+import { useSignUp } from '@clerk/clerk-react';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -9,14 +9,8 @@ import {
 import AuthBrandHero from '@/components/AuthBrandHero';
 import { useColors } from '@/hooks/useColors';
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-
 export default function WebSignUpScreen() {
-  return (
-    <ClerkProvider publishableKey={publishableKey}>
-      <WebSignUpInner />
-    </ClerkProvider>
-  );
+  return <WebSignUpInner />;
 }
 
 function WebSignUpInner() {

@@ -1,9 +1,9 @@
-import { useAuth } from '@clerk/expo';
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useTravelAuth } from '@/hooks/useTravelAuth';
 
 export default function AuthLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useTravelAuth();
 
   if (!isLoaded) {
     return (
