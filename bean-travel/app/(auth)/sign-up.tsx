@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useSSO } from '@clerk/expo';
+import { useClerk, useSSO } from '@clerk/expo';
 import { useSignUpLegacy } from '@/hooks/useClerkAuth';
 import * as AuthSession from 'expo-auth-session';
 import { useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ export default function SignUpScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const clerk = useClerk() as any;
   const { signUp, setActive, isLoaded } = useSignUpLegacy();
   const { startSSOFlow } = useSSO();
 
@@ -72,17 +73,29 @@ export default function SignUpScreen() {
     setErrorMsg('');
     try {
       if (Platform.OS === 'web') {
-        if (!signUp?.authenticateWithRedirect) {
-          setErrorMsg('Google sign-up is still loading. Please try again.');
+        if (signUp?.authenticateWithRedirect) {
+          await signUp.authenticateWithRedirect({
+            strategy: 'oauth_google',
+            redirectUrl: buildWebUrl('/sso-callback'),
+            redirectUrlComplete: '/',
+            continueSignIn: true,
+            continueSignUp: true,
+          });
           return;
         }
-        await signUp.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: buildWebUrl('/sso-callback'),
-          redirectUrlComplete: '/(tabs)',
-          continueSignIn: true,
-          continueSignUp: true,
-        });
+
+        if (clerk?.redirectToSignUp) {
+          await clerk.redirectToSignUp({
+            signUpForceRedirectUrl: '/',
+            signUpFallbackRedirectUrl: '/',
+            signInForceRedirectUrl: '/',
+            signInFallbackRedirectUrl: '/',
+            initialValues: email ? { emailAddress: email } : undefined,
+          });
+          return;
+        }
+
+        setErrorMsg('Sign up is still loading. Please refresh and try again.');
         return;
       }
 
@@ -100,7 +113,7 @@ export default function SignUpScreen() {
     } finally {
       setLoading(false);
     }
-  }, [signUp, startSSOFlow, router]);
+  }, [clerk, email, signUp, startSSOFlow, router]);
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
 

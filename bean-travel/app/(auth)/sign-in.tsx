@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useSSO } from '@clerk/expo';
+import { useClerk, useSSO } from '@clerk/expo';
 import { useSignInLegacy } from '@/hooks/useClerkAuth';
 import * as AuthSession from 'expo-auth-session';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,6 +22,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ redirect?: string | string[] }>();
+  const clerk = useClerk() as any;
   const { signIn, setActive, isLoaded } = useSignInLegacy();
   const { startSSOFlow } = useSSO();
 
@@ -125,17 +126,29 @@ export default function SignInScreen() {
     setErrorMsg('');
     try {
       if (Platform.OS === 'web') {
-        if (!signIn?.authenticateWithRedirect) {
-          setErrorMsg('Google sign-in is still loading. Please try again.');
+        if (signIn?.authenticateWithRedirect) {
+          await signIn.authenticateWithRedirect({
+            strategy: 'oauth_google',
+            redirectUrl: buildWebUrl('/sso-callback'),
+            redirectUrlComplete: redirectTo,
+            continueSignIn: true,
+            continueSignUp: true,
+          });
           return;
         }
-        await signIn.authenticateWithRedirect({
-          strategy: 'oauth_google',
-          redirectUrl: buildWebUrl('/sso-callback'),
-          redirectUrlComplete: redirectTo,
-          continueSignIn: true,
-          continueSignUp: true,
-        });
+
+        if (clerk?.redirectToSignIn) {
+          await clerk.redirectToSignIn({
+            signInForceRedirectUrl: redirectTo,
+            signInFallbackRedirectUrl: redirectTo,
+            signUpForceRedirectUrl: redirectTo,
+            signUpFallbackRedirectUrl: redirectTo,
+            initialValues: email ? { emailAddress: email } : undefined,
+          });
+          return;
+        }
+
+        setErrorMsg('Sign in is still loading. Please refresh and try again.');
         return;
       }
 
@@ -153,7 +166,7 @@ export default function SignInScreen() {
     } finally {
       setLoading(false);
     }
-  }, [signIn, startSSOFlow, router, redirectTo]);
+  }, [clerk, email, signIn, startSSOFlow, router, redirectTo]);
 
   const topPt = Platform.OS === 'web' ? 67 : insets.top;
 
