@@ -24,6 +24,7 @@ export default function BlogEditorScreen() {
   const post = params.id ? getBlogPostById(String(params.id)) : undefined;
   const [draft, setDraft] = useState<BlogPost | undefined>(post);
   const [saving, setSaving] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const link = useMemo(() => draft ? publicBlogUrl(blogSettings, draft) : '', [blogSettings, draft]);
   const blogLink = useMemo(() => publicBlogUrl(blogSettings), [blogSettings]);
 
@@ -43,17 +44,19 @@ export default function BlogEditorScreen() {
   }
 
   function patch(update: Partial<BlogPost>) {
+    setSaveNotice(null);
     setDraft(prev => prev ? { ...prev, ...update } : prev);
   }
 
   async function save() {
     if (!draft) return;
     setSaving(true);
+    setSaveNotice(null);
     try {
       await editBlogPost(draft.id, draft);
-      Alert.alert('Saved', 'Your blog draft has been saved.');
+      setSaveNotice({ type: 'success', message: 'Draft saved. Your changes are safe.' });
     } catch (error: any) {
-      Alert.alert('Could not save', error?.message ?? 'Please try again.');
+      setSaveNotice({ type: 'error', message: error?.message ?? "Sorry, we couldn't save this draft. Please try again." });
     } finally {
       setSaving(false);
     }
@@ -257,6 +260,12 @@ export default function BlogEditorScreen() {
           <Feather name="save" size={17} color="#fff" />
           <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save Draft'}</Text>
         </TouchableOpacity>
+        {saveNotice ? (
+          <View style={[styles.saveNotice, saveNotice.type === 'error' && styles.saveNoticeError]}>
+            <Feather name={saveNotice.type === 'success' ? 'check-circle' : 'alert-circle'} size={17} color={saveNotice.type === 'success' ? '#153A46' : '#B83224'} />
+            <Text style={[styles.saveNoticeText, saveNotice.type === 'error' && styles.saveNoticeTextError]}>{saveNotice.message}</Text>
+          </View>
+        ) : null}
         {draft.status === 'published' ? (
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.secondaryButton} onPress={openPublicLink} activeOpacity={0.86}>
@@ -326,6 +335,10 @@ const styles = StyleSheet.create({
   previewBlogUrl: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 6 },
   saveButton: { marginTop: 18, minHeight: 52, borderRadius: 26, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   saveText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
+  saveNotice: { marginTop: 10, minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: '#9BDCCB', backgroundColor: '#EAF8F3', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  saveNoticeError: { borderColor: '#F0B5A8', backgroundColor: '#FFF1E6' },
+  saveNoticeText: { flex: 1, color: '#153A46', fontSize: 13, lineHeight: 18, fontFamily: 'Inter_700Bold' },
+  saveNoticeTextError: { color: '#B83224' },
   publishButton: { marginTop: 10, minHeight: 52, borderRadius: 26, backgroundColor: '#153A46', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   publishText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
   buttonRow: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 10, marginTop: 10 },
