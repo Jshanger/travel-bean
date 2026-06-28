@@ -35,11 +35,8 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
-  const publicReaderLinkText = blogUrl
-    ? isSignedIn
-      ? blogUrl
-      : `${blogUrl} will go live after web sign-in and publish`
-    : 'Choose a username to create your public link';
+  const publicReaderLinkText = blogUrl || 'Choose a username to create your public link';
+  const isPublicBlogLive = blogSettings.privacy === 'public';
   const top = Platform.OS === 'web' ? 42 : insets.top + 18;
   const bottomNavHeight = 76 + Math.max(insets.bottom, 10);
 
@@ -50,14 +47,6 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   async function ensurePublicBlogSettings() {
     if (!blogUrl) {
       Alert.alert('Set your blog username', 'Choose a username before sharing your public blog link.');
-      return null;
-    }
-    if (!isSignedIn) {
-      setDashboardLinkStatus('signin');
-      Alert.alert('Publish from the web dashboard', 'Your app dashboard stays open. To make this blog public for readers, sign in on the web dashboard and publish it to the cloud.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Web Sign In', onPress: goSignIn },
-      ]);
       return null;
     }
     try {
@@ -171,15 +160,15 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
             <Text style={styles.dashboardToolText}>
               {isSignedIn
                 ? 'This is the link other people use to read your published posts.'
-                : 'Create and edit here without signing in. Use the web dashboard when you are ready to make the reader link live.'}
+                : 'Create, edit, and publish from the app. Readers only see posts after you publish them online.'}
             </Text>
             <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
-                <Feather name={isSignedIn ? 'share-2' : 'upload-cloud'} size={16} color="#fff" />
-                <Text style={styles.primaryText}>{isSignedIn ? 'Share Reader Link' : 'Publish Online'}</Text>
+                <Feather name={isPublicBlogLive ? 'share-2' : 'upload-cloud'} size={16} color="#fff" />
+                <Text style={styles.primaryText}>{isPublicBlogLive ? 'Share Reader Link' : 'Publish Online'}</Text>
               </TouchableOpacity>
-              {blogUrl && isSignedIn ? (
+              {blogUrl && isPublicBlogLive ? (
                 <TouchableOpacity style={styles.secondaryButton} onPress={viewPublicBlog} activeOpacity={0.86}>
                   <Feather name="external-link" size={16} color={ORANGE} />
                   <Text style={styles.secondaryText}>View Reader Blog</Text>

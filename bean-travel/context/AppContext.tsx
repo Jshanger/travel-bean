@@ -5,7 +5,7 @@ import { useSubscription } from '@/services/revenuecat';
 import { BeanPhoto, BlogPost, BucketItem, BucketStatus, BucketTag, TravelBlogSettings, Trip, ItineraryItem, TripComment, VisitedPlace } from '@/types';
 import { encodePersistedBeanNotes, hydratePersistedBean } from '@/utils/beanPersistence';
 import { defaultPremiumState, FREE_BLOG_POST_LIMIT, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
-import { createDefaultBlogSettings, generateBlogDraftFromBean, uniqueBlogSlug } from '@/utils/travelBlog';
+import { createDefaultBlogSettings, generateBlogDraftFromBean, publishBlogPost, uniqueBlogSlug } from '@/utils/travelBlog';
 import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 
 function uid() {
@@ -283,6 +283,24 @@ function parseStoredBlogPosts(value: string | null): BlogPost[] {
   } catch {
     return [];
   }
+}
+
+async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: BlogPost[]): Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }> {
+  const response = await blogApiFetch('/public-sync', null, {
+    method: 'POST',
+    body: JSON.stringify({
+      settings: { ...settings, privacy: 'public' },
+      posts,
+    }),
+  });
+  const savedSettings = mapBlogSettings(response.settings);
+  if (!savedSettings) {
+    throw new Error('Could not publish blog settings.');
+  }
+  return {
+    settings: savedSettings,
+    posts: Array.isArray(response.posts) ? response.posts.map(mapBlogPost) : posts,
+  };
 }
 
 interface AppContextType {
@@ -784,9 +802,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: blogSettings.createdAt || now,
     };
     const requiresCloud = next.privacy !== 'private';
-    if (requiresCloud && useLocalData) {
-      throw new Error('Sign in to publish your Travel Bean Blog for public readers.');
-    }
     if (!useLocalData) {
       try {
         const token = await getToken();
@@ -801,7 +816,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.warn('Cloud blog settings save failed; preserving on this device instead.', error);
-        if (requiresCloud) {
+        if (requiresCloud && !useLocalData) {
           throw error;
         }
       }
@@ -877,12 +892,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!blogSettings.username) {
       throw new Error('Choose a blog username before publishing.');
     }
+    const postToPublish = { ...currentPost, ...postOverride, id };
     if (useLocalData) {
-      throw new Error('Sign in to publish your Travel Bean Blog for public readers.');
+      const publishedPost = publishBlogPost(postToPublish, postToPublish.privacy === 'password' ? 'password' : 'public');
+      const publishedSettings: TravelBlogSettings = { ...blogSettings, privacy: 'public', updatedAt: new Date().toISOString() };
+      const nextPosts = blogPosts.map(item => item.id === id ? publishedPost : item);
+      const synced = await publishLocalBlogSnapshot(publishedSettings, nextPosts);
+      await storeBlogSettings(synced.settings);
+      await storeBlogPosts(synced.posts);
+      return synced.posts.find(item => item.id === id) ?? publishedPost;
     }
 
     const token = await getToken();
-    const postToPublish = { ...currentPost, ...postOverride, id };
     const publicSettings = mapBlogSettings(await blogApiFetch('/settings', token, {
       method: 'PUT',
       body: JSON.stringify({ ...blogSettings, privacy: 'public' }),
@@ -953,7 +974,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Choose a blog username before publishing.');
     }
     if (useLocalData) {
-      throw new Error('Sign in to publish your Travel Bean Blog for public readers.');
+      const synced = await publishLocalBlogSnapshot(
+        { ...blogSettings, privacy: 'public', updatedAt: new Date().toISOString() },
+        blogPosts,
+      );
+      await storeBlogSettings(synced.settings);
+      await storeBlogPosts(synced.posts);
+      return synced;
     }
     const token = await getToken();
     const savedSettings = mapBlogSettings(await blogApiFetch('/settings', token, {

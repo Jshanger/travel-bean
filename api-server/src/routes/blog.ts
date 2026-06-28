@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, blogPosts, placePhotos, travelBlogSettings } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { loadObject } from "../utils/storage";
 
@@ -17,6 +17,22 @@ function sanitizeUsername(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 24);
+}
+
+function allowedLocalPublishUsernames() {
+  return (process.env.PUBLIC_LOCAL_BLOG_USERNAMES ?? "josh")
+    .split(",")
+    .map(item => item.trim() === "*" ? "*" : sanitizeUsername(item))
+    .filter(Boolean);
+}
+
+function canPublishLocalUsername(username: string) {
+  const allowed = allowedLocalPublishUsernames();
+  return allowed.includes("*") || allowed.includes(username);
+}
+
+function localPublishUserId(username: string) {
+  return `local-blog:${username}`;
 }
 
 function settingsPayload(row: typeof travelBlogSettings.$inferSelect | undefined) {
@@ -245,6 +261,95 @@ router.get("/public/:username/:slug", async (req, res) => {
       ...postPayload(post, false),
       ...publicBlogPhotos(post),
     },
+  });
+});
+
+router.post("/public-sync", async (req, res) => {
+  const body = req.body ?? {};
+  const incomingSettings = body.settings ?? {};
+  const username = sanitizeUsername(incomingSettings.username ?? "");
+  if (!username) {
+    res.status(400).json({ error: "Username is required" });
+    return;
+  }
+  if (!canPublishLocalUsername(username)) {
+    res.status(403).json({ error: "This trial publish route is not enabled for that username" });
+    return;
+  }
+
+  const now = new Date();
+  const [taken] = await db.select().from(travelBlogSettings).where(eq(travelBlogSettings.username, username));
+  const userId = taken?.userId ?? localPublishUserId(username);
+
+  let settings = taken;
+  const settingsValues = {
+    username,
+    title: incomingSettings.title ?? taken?.title ?? "My Travel Bean Blog",
+    intro: incomingSettings.intro ?? taken?.intro ?? "",
+    privacy: "public",
+    updatedAt: now,
+  };
+  if (settings) {
+    const [row] = await db.update(travelBlogSettings)
+      .set(settingsValues)
+      .where(eq(travelBlogSettings.username, username))
+      .returning();
+    settings = row;
+  } else {
+    const [row] = await db.insert(travelBlogSettings).values({
+      userId,
+      ...settingsValues,
+    }).returning();
+    settings = row;
+  }
+
+  const incomingPosts = (Array.isArray(body.posts) ? body.posts : [])
+    .filter((post: any) => post?.id && post?.slug && post?.title)
+    .slice(0, 100);
+  const incomingIds = incomingPosts.map((post: any) => String(post.id));
+  if (incomingIds.length) {
+    await db.delete(blogPosts).where(and(
+      eq(blogPosts.userId, userId),
+      notInArray(blogPosts.id, incomingIds),
+    ));
+  } else {
+    await db.delete(blogPosts).where(eq(blogPosts.userId, userId));
+  }
+
+  const savedPosts: Array<typeof blogPosts.$inferSelect> = [];
+  for (const post of incomingPosts) {
+    const [existing] = await db.select().from(blogPosts).where(and(
+      eq(blogPosts.id, String(post.id)),
+      eq(blogPosts.userId, userId),
+    ));
+    const isPublished = post.status === "published";
+    const values = {
+      ...postValues(userId, {
+        ...post,
+        status: isPublished ? "published" : "draft",
+        privacy: isPublished ? (post.privacy === "password" ? "password" : "public") : "private",
+        publishedAt: isPublished ? post.publishedAt ?? now.toISOString() : null,
+      }, existing),
+      publishedAt: isPublished ? (post.publishedAt ? new Date(post.publishedAt) : existing?.publishedAt ?? now) : null,
+    };
+    if (existing) {
+      const [row] = await db.update(blogPosts)
+        .set(values)
+        .where(and(eq(blogPosts.id, String(post.id)), eq(blogPosts.userId, userId)))
+        .returning();
+      if (row) savedPosts.push(row);
+    } else {
+      const [row] = await db.insert(blogPosts).values({
+        id: String(post.id),
+        ...values,
+      }).returning();
+      if (row) savedPosts.push(row);
+    }
+  }
+
+  res.json({
+    settings: settingsPayload(settings),
+    posts: savedPosts.map(post => postPayload(post, true)),
   });
 });
 
