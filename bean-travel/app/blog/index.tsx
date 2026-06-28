@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumModal from '@/components/PremiumModal';
 import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
@@ -19,6 +19,38 @@ const PAPER = '#FFF8EF';
 const CARD = '#FFFDF8';
 const BORDER = '#F1D7C5';
 
+function dashboardUrl() {
+  const domain = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '');
+  if (domain) return `https://${domain}/dashboard`;
+  if (typeof window !== 'undefined' && window.location?.origin) return `${window.location.origin}/dashboard`;
+  return 'https://travel-bean-production.up.railway.app/dashboard';
+}
+
+function dashboardEmailBody(url = dashboardUrl()) {
+  return [
+    'Open your Travel Bean dashboard from your laptop:',
+    '',
+    url,
+    '',
+    'Log in on web to edit blog posts, organise drafts, and publish your travel stories.',
+  ].join('\n');
+}
+
+async function openDashboardEmailDraft(email?: string) {
+  const subject = 'Edit your Travel Bean Blog on web';
+  const body = dashboardEmailBody();
+  const recipient = email?.trim() ? encodeURIComponent(email.trim()) : '';
+  const mailto = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  try {
+    await Linking.openURL(mailto);
+    return 'mail' as const;
+  } catch {
+    await Share.share({ title: subject, message: body });
+    return 'share' as const;
+  }
+}
+
 type BlogDashboardProps = {
   requireSignedIn?: boolean;
 };
@@ -28,10 +60,10 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   const insets = useSafeAreaInsets();
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
-  const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'failed' | 'signin'>('idle');
+  const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'draft' | 'failed'>('idle');
   const { isSignedIn } = useTravelAuth();
   const { user } = useTravelUser();
-  const { blogSettings, blogPosts, places, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
+  const { blogSettings, blogPosts, places, userProfile, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
@@ -88,20 +120,28 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
 
   async function sendDashboardLink() {
     setDashboardLinkStatus('idle');
-    if (!isSignedIn) {
-      setDashboardLinkStatus('signin');
-      Alert.alert('Web sign-in needed', 'Sign in on the web dashboard first so Travel Bean knows which email address to send the laptop link to.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Web Sign In', onPress: goSignIn },
-      ]);
-      return;
-    }
-    const email = user?.primaryEmailAddress?.emailAddress;
+    const email = user?.primaryEmailAddress?.emailAddress ?? userProfile?.email;
     setEmailingDashboardLink(true);
     try {
-      await emailDashboardLink(email);
-      setDashboardLinkStatus('sent');
-      Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
+      if (isSignedIn && email) {
+        try {
+          await emailDashboardLink(email);
+          setDashboardLinkStatus('sent');
+          Alert.alert('Link sent', 'Link sent. Check your email to open Travel Bean on your laptop.');
+          return;
+        } catch {
+          // Fall through to a local email draft when the server email provider is not configured yet.
+        }
+      }
+
+      await openDashboardEmailDraft(email);
+      setDashboardLinkStatus('draft');
+      Alert.alert(
+        'Email ready',
+        email
+          ? 'Your email app opened with the laptop dashboard link ready to send.'
+          : 'Your email app opened with the dashboard link. Add your email address and send it to yourself.'
+      );
     } catch {
       setDashboardLinkStatus('failed');
       Alert.alert('Email failed', 'Sorry, we couldn’t send the email. Please try again.');
@@ -188,7 +228,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
           </View>
           <View style={styles.dashboardToolCopy}>
             <Text style={styles.dashboardToolTitle}>Edit on laptop</Text>
-            <Text style={styles.dashboardToolText}>Send yourself a dashboard link for writing longer posts on a larger screen.</Text>
+            <Text style={styles.dashboardToolText}>Email yourself the web dashboard link for writing longer posts on a larger screen.</Text>
             <TouchableOpacity
               style={[styles.dashboardPrimaryButton, emailingDashboardLink && styles.disabledButton]}
               onPress={sendDashboardLink}
@@ -200,7 +240,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
               ) : (
                 <>
                   <Feather name="mail" size={16} color="#fff" />
-                  <Text style={styles.dashboardPrimaryText}>{isSignedIn ? 'Email Laptop Link' : 'Open Web Sign In'}</Text>
+                  <Text style={styles.dashboardPrimaryText}>Email Laptop Link</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -212,8 +252,8 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
               ]}>
                 {dashboardLinkStatus === 'sent'
                   ? 'Link sent. Check your email to open Travel Bean on your laptop.'
-                  : dashboardLinkStatus === 'signin'
-                    ? 'Sign in first so Travel Bean knows where to send the link.'
+                  : dashboardLinkStatus === 'draft'
+                    ? 'Your email app opened with the dashboard link ready to send.'
                     : 'Sorry, we couldn’t send the email. Please try again.'}
               </Text>
             ) : null}

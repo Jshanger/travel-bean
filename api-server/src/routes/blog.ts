@@ -155,13 +155,21 @@ async function accountEmailForUser(userId: string, fallbackEmail?: string) {
   }
 }
 
+function dashboardUrl() {
+  const configured =
+    process.env.DASHBOARD_URL ??
+    (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN.replace(/^https?:\/\//, "")}/dashboard` : undefined);
+  return configured ?? "https://travel-bean-production.up.railway.app/dashboard";
+}
+
 function dashboardEmailBody() {
+  const url = dashboardUrl();
   return [
     "Open your Travel Bean dashboard from your laptop:",
     "",
-    "https://travelbean.app/dashboard",
+    url,
     "",
-    "Log in with the same account you use in the Travel Bean app to edit your blog posts, organise drafts, and publish your travel stories.",
+    "Log in on web to edit blog posts, organise drafts, and publish your travel stories.",
   ].join("\n");
 }
 
@@ -372,10 +380,11 @@ router.post("/email-dashboard-link", async (req, res) => {
 
   const subject = "Edit your Travel Bean Blog on web";
   const text = dashboardEmailBody();
+  const url = dashboardUrl();
   const html = `
     <p>Open your Travel Bean dashboard from your laptop:</p>
-    <p><a href="https://travelbean.app/dashboard">https://travelbean.app/dashboard</a></p>
-    <p>Log in with the same account you use in the Travel Bean app to edit your blog posts, organise drafts, and publish your travel stories.</p>
+    <p><a href="${url}">${url}</a></p>
+    <p>Log in on web to edit blog posts, organise drafts, and publish your travel stories.</p>
   `;
 
   try {
