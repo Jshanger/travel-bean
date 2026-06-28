@@ -19,13 +19,15 @@ export default function PublicBlogPost() {
   const router = useRouter();
   const params = useLocalSearchParams<{ username?: string; slug?: string }>();
   const [password, setPassword] = useState('');
+  const [submittedPassword, setSubmittedPassword] = useState('');
+  const [passwordAttempted, setPasswordAttempted] = useState(false);
   const [remotePost, setRemotePost] = useState<{ settings: TravelBlogSettings; post: BlogPost & { passwordRequired?: boolean } } | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
   const requested = sanitizeBlogUsername(String(params.username ?? ''));
   const post = remotePost?.post;
   const activeSettings = remotePost?.settings;
   const passwordRequired = Boolean(post && 'passwordRequired' in post && post.passwordRequired);
-  const unlocked = post?.privacy !== 'password' || password === (post.password ?? '') || !passwordRequired;
+  const unlocked = post?.privacy !== 'password' || !passwordRequired;
 
   async function sharePost() {
     if (!activeSettings || !post) return;
@@ -56,7 +58,7 @@ export default function PublicBlogPost() {
       };
     }
     setRemoteLoaded(false);
-    const query = password ? `?password=${encodeURIComponent(password)}` : '';
+    const query = submittedPassword ? `?password=${encodeURIComponent(submittedPassword)}` : '';
     fetch(`${apiRoot()}/blog/public/${encodeURIComponent(requested)}/${encodeURIComponent(String(params.slug))}${query}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
@@ -72,7 +74,7 @@ export default function PublicBlogPost() {
     return () => {
       mounted = false;
     };
-  }, [params.slug, password, requested]);
+  }, [params.slug, requested, submittedPassword]);
 
   if ((!activeSettings || !post) && !remoteLoaded) {
     return (
@@ -132,7 +134,34 @@ export default function PublicBlogPost() {
             <Feather name="lock" size={26} color={ORANGE} />
             <Text style={styles.passwordTitle}>Password protected</Text>
             <Text style={styles.passwordText}>Enter the post password to read this Travel Bean story.</Text>
-            <TextInput value={password} onChangeText={setPassword} placeholder="Password" placeholderTextColor="#A98B7A" secureTextEntry style={styles.passwordInput} />
+            <TextInput
+              value={password}
+              onChangeText={value => {
+                setPassword(value);
+                if (passwordAttempted) setPasswordAttempted(false);
+              }}
+              placeholder="Password"
+              placeholderTextColor="#A98B7A"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.passwordInput}
+            />
+            {passwordAttempted && passwordRequired ? <Text style={styles.passwordError}>That password did not unlock this story.</Text> : null}
+            <TouchableOpacity
+              style={[styles.unlockButton, !password.trim() && styles.unlockButtonDisabled]}
+              onPress={() => {
+                const cleanPassword = password.trim();
+                if (!cleanPassword) return;
+                setPasswordAttempted(true);
+                setSubmittedPassword(cleanPassword);
+              }}
+              disabled={!password.trim()}
+              activeOpacity={0.86}
+            >
+              <Feather name="unlock" size={16} color="#fff" />
+              <Text style={styles.unlockButtonText}>Unlock Story</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -187,6 +216,10 @@ const styles = StyleSheet.create({
   passwordTitle: { color: INK, fontSize: 22, fontFamily: 'Inter_700Bold', marginTop: 9 },
   passwordText: { color: MUTED, fontSize: 14, lineHeight: 21, fontFamily: 'Inter_500Medium', textAlign: 'center', marginTop: 5 },
   passwordInput: { width: '100%', maxWidth: 360, minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, paddingHorizontal: 13, color: INK, fontSize: 15, fontFamily: 'Inter_600SemiBold', marginTop: 14 },
+  passwordError: { color: '#B83224', fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 8 },
+  unlockButton: { minHeight: 46, borderRadius: 23, backgroundColor: ORANGE, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 },
+  unlockButtonDisabled: { opacity: 0.45 },
+  unlockButtonText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   footer: { color: ORANGE, fontSize: 13, fontFamily: 'Inter_700Bold', textAlign: 'center', marginTop: 22 },
 });
 

@@ -48,12 +48,28 @@ export default function BlogEditorScreen() {
     setDraft(prev => prev ? { ...prev, ...update } : prev);
   }
 
+  function draftForSave(current: BlogPost): BlogPost {
+    const nextPassword = current.privacy === 'password' ? current.password?.trim() : undefined;
+    return {
+      ...current,
+      password: nextPassword,
+      status: current.privacy === 'private' ? 'draft' : current.status,
+      publishedAt: current.privacy === 'private' ? null : current.publishedAt,
+    };
+  }
+
   async function save() {
     if (!draft) return;
+    const draftToSave = draftForSave(draft);
+    if (draft.status === 'published' && draftToSave.privacy === 'password' && !draftToSave.password) {
+      setSaveNotice({ type: 'error', message: 'Add a post password before saving this protected live story.' });
+      return;
+    }
     setSaving(true);
     setSaveNotice(null);
     try {
-      await editBlogPost(draft.id, draft);
+      await editBlogPost(draftToSave.id, draftToSave);
+      setDraft(draftToSave);
       setSaveNotice({ type: 'success', message: 'Draft saved. Your changes are safe.' });
     } catch (error: any) {
       setSaveNotice({ type: 'error', message: error?.message ?? "Sorry, we couldn't save this draft. Please try again." });
@@ -64,7 +80,15 @@ export default function BlogEditorScreen() {
 
   async function publish() {
     if (!draft) return;
-    const draftToPublish = draft;
+    const publishPrivacy: BlogPrivacy = draft.privacy === 'password' ? 'password' : 'public';
+    const draftToPublish: BlogPost = {
+      ...draftForSave(draft),
+      privacy: publishPrivacy,
+    };
+    if (draftToPublish.privacy === 'password' && !draftToPublish.password) {
+      setSaveNotice({ type: 'error', message: 'Add a post password before publishing this protected story.' });
+      return;
+    }
     if (!blogSettings.username) {
       router.push({ pathname: '/blog/settings', params: { sourcePlaceId: draftToPublish.sourcePlaceId } } as any);
       return;
@@ -214,7 +238,8 @@ export default function BlogEditorScreen() {
         {draft.privacy === 'password' ? (
           <>
             <Text style={styles.label}>Post password</Text>
-            <TextInput value={draft.password ?? ''} onChangeText={password => patch({ password })} style={styles.input} placeholder="Choose a password" placeholderTextColor="#A98B7A" />
+            <TextInput value={draft.password ?? ''} onChangeText={password => patch({ password })} style={styles.input} placeholder="Choose a password" placeholderTextColor="#A98B7A" secureTextEntry autoCapitalize="none" autoCorrect={false} />
+            <Text style={styles.helperText}>Readers will need this password before they can open the full story and gallery.</Text>
           </>
         ) : null}
 
@@ -252,6 +277,12 @@ export default function BlogEditorScreen() {
           <Text style={styles.previewKicker}>Share preview</Text>
           <Text style={styles.previewTitle}>{draft.title}</Text>
           <Text style={styles.previewText}>{draft.subtitle}</Text>
+          {draft.privacy === 'password' ? (
+            <View style={styles.previewProtected}>
+              <Feather name="lock" size={13} color="#153A46" />
+              <Text style={styles.previewProtectedText}>Password protected. Readers will see a lock screen before the story opens.</Text>
+            </View>
+          ) : null}
           <Text style={styles.previewUrl}>{link || 'Set a username to create your link'}</Text>
           {blogLink ? <Text style={styles.previewBlogUrl}>Whole blog: {blogLink}</Text> : null}
         </View>
@@ -309,6 +340,7 @@ const styles = StyleSheet.create({
   label: { color: MUTED, fontSize: 12, fontFamily: 'Inter_700Bold', marginBottom: 7, marginTop: 14 },
   input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 13, paddingVertical: 11, color: INK, fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   bodyInput: { minHeight: 220, textAlignVertical: 'top', lineHeight: 22 },
+  helperText: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 7 },
   refreshButton: { alignSelf: 'flex-start', minHeight: 38, borderRadius: 19, borderWidth: 1, borderColor: BORDER, backgroundColor: '#FFF1E6', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 10 },
   refreshText: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold' },
   formRow: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 10 },
@@ -331,6 +363,8 @@ const styles = StyleSheet.create({
   previewKicker: { color: ORANGE, fontSize: 11, fontFamily: 'Inter_700Bold', marginBottom: 6 },
   previewTitle: { color: INK, fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
   previewText: { color: MUTED, fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 4 },
+  previewProtected: { marginTop: 10, alignSelf: 'flex-start', borderRadius: 15, backgroundColor: '#EAF8F3', paddingHorizontal: 10, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  previewProtectedText: { color: '#153A46', fontSize: 11, lineHeight: 16, fontFamily: 'Inter_700Bold' },
   previewUrl: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold', marginTop: 10 },
   previewBlogUrl: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 6 },
   saveButton: { marginTop: 18, minHeight: 52, borderRadius: 26, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },

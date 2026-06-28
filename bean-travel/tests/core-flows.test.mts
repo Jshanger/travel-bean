@@ -260,6 +260,26 @@ test('Travel Blog routes and journal action are wired', () => {
   assert.match(journalScreen, /createBlogDraftFromPlace/);
 });
 
+test('Travel Blog privacy controls protect drafts and password posts', () => {
+  const editorScreen = readFileSync(new URL('../app/blog/editor/[id].tsx', import.meta.url), 'utf8');
+  const publicPostScreen = readFileSync(new URL('../app/[username]/[slug].tsx', import.meta.url), 'utf8');
+  const blogRoutes = readFileSync(new URL('../../api-server/src/routes/blog.ts', import.meta.url), 'utf8');
+
+  assert.match(editorScreen, /Add a post password before publishing this protected story/);
+  assert.match(editorScreen, /secureTextEntry autoCapitalize="none" autoCorrect=\{false\}/);
+  assert.match(editorScreen, /Readers will need this password/);
+
+  assert.match(publicPostScreen, /submittedPassword/);
+  assert.match(publicPostScreen, /Unlock Story/);
+  assert.match(publicPostScreen, /That password did not unlock this story/);
+
+  assert.match(blogRoutes, /function publicListPostPayload/);
+  assert.match(blogRoutes, /body: isPasswordProtected \? "" : post\.body/);
+  assert.match(blogRoutes, /passwordRequired: true/);
+  assert.match(blogRoutes, /A password is required before publishing a password-protected post/);
+  assert.match(blogRoutes, /canServePublicPhoto\(photoId: string, password\?: string\)/);
+});
+
 test('premium postcard destination titles shrink instead of being shortened', () => {
   const createScreen = readFileSync(new URL('../app/(tabs)/create.tsx', import.meta.url), 'utf8');
   const collageCard = readFileSync(new URL('../components/BeanCollageCard.tsx', import.meta.url), 'utf8');

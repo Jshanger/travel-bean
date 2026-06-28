@@ -77,14 +77,22 @@ function postPayload(row: typeof blogPosts.$inferSelect, includePassword = false
   };
 }
 
+function passwordValue(body: any, existing?: typeof blogPosts.$inferSelect) {
+  if (body.privacy && body.privacy !== "password") return null;
+  if (typeof body.password === "string") return body.password.trim() || null;
+  return existing?.password ?? null;
+}
+
 function postValues(userId: string, body: any, existing?: typeof blogPosts.$inferSelect) {
   const now = new Date();
+  const nextPrivacy = body.privacy ?? existing?.privacy ?? "private";
+  const nextStatus = nextPrivacy === "private" ? "draft" : body.status ?? existing?.status ?? "draft";
   return {
     userId,
     sourcePlaceId: body.sourcePlaceId ?? existing?.sourcePlaceId ?? "",
-    status: body.status ?? existing?.status ?? "draft",
-    privacy: body.privacy ?? existing?.privacy ?? "private",
-    password: body.password ?? existing?.password ?? null,
+    status: nextStatus,
+    privacy: nextPrivacy,
+    password: passwordValue(body, existing),
     slug: body.slug ?? existing?.slug ?? "travel-memory",
     title: body.title ?? existing?.title ?? "Travel memory",
     subtitle: body.subtitle ?? existing?.subtitle ?? "",
@@ -102,32 +110,45 @@ function postValues(userId: string, body: any, existing?: typeof blogPosts.$infe
     hideExactLocation: Boolean(body.hideExactLocation ?? existing?.hideExactLocation ?? false),
     hideDate: Boolean(body.hideDate ?? existing?.hideDate ?? false),
     updatedAt: now,
-    publishedAt: body.publishedAt ? new Date(body.publishedAt) : existing?.publishedAt ?? null,
+    publishedAt: nextStatus === "published" ? (body.publishedAt ? new Date(body.publishedAt) : existing?.publishedAt ?? null) : null,
   };
 }
 
-function publicImagePath(photoId: string) {
-  return `/api/blog/public/images/${encodeURIComponent(photoId)}`;
+function publicImagePath(photoId: string, password?: string) {
+  const query = password ? `?password=${encodeURIComponent(password)}` : "";
+  return `/api/blog/public/images/${encodeURIComponent(photoId)}${query}`;
 }
 
 function canUseStoredImageUrl(value: unknown) {
   return typeof value === "string" && /^(https?:|data:image\/)/i.test(value);
 }
 
-function publicBlogPhotos(post: typeof blogPosts.$inferSelect, publicOnly = false) {
-  if (publicOnly && post.privacy !== "public") {
+function publicBlogPhotos(post: typeof blogPosts.$inferSelect, options: { redacted?: boolean; password?: string } = {}) {
+  const imagePassword = post.privacy === "password" ? options.password : undefined;
+  if (options.redacted || (post.privacy === "password" && !imagePassword)) {
     return {
-      coverImageUrl: post.coverImageUrl,
-      photos: Array.isArray(post.photos) ? post.photos : [],
+      coverImageUrl: undefined,
+      photos: [],
     };
   }
   const photos = (Array.isArray(post.photos) ? post.photos : []).map((photo: any) => ({
     ...photo,
-    imageUrl: canUseStoredImageUrl(photo?.imageUrl) ? photo.imageUrl : (photo?.id ? publicImagePath(photo.id) : photo?.imageUrl),
+    imageUrl: canUseStoredImageUrl(photo?.imageUrl) ? photo.imageUrl : (photo?.id ? publicImagePath(photo.id, imagePassword) : photo?.imageUrl),
   }));
   return {
-    coverImageUrl: canUseStoredImageUrl(post.coverImageUrl) ? post.coverImageUrl : (post.coverPhotoId ? publicImagePath(post.coverPhotoId) : post.coverImageUrl),
+    coverImageUrl: canUseStoredImageUrl(post.coverImageUrl) ? post.coverImageUrl : (post.coverPhotoId ? publicImagePath(post.coverPhotoId, imagePassword) : post.coverImageUrl),
     photos,
+  };
+}
+
+function publicListPostPayload(post: typeof blogPosts.$inferSelect) {
+  const isPasswordProtected = post.privacy === "password";
+  return {
+    ...postPayload(post, false),
+    body: isPasswordProtected ? "" : post.body,
+    opening: isPasswordProtected ? "" : post.opening,
+    ...(isPasswordProtected ? { passwordRequired: true } : {}),
+    ...publicBlogPhotos(post, { redacted: isPasswordProtected }),
   };
 }
 
@@ -173,12 +194,11 @@ function dashboardEmailBody() {
   ].join("\n");
 }
 
-async function canServePublicPhoto(photoId: string) {
-  const posts = await db.select().from(blogPosts).where(and(
-    eq(blogPosts.status, "published"),
-    eq(blogPosts.privacy, "public"),
-  ));
+async function canServePublicPhoto(photoId: string, password?: string) {
+  const posts = await db.select().from(blogPosts).where(eq(blogPosts.status, "published"));
   for (const post of posts) {
+    const isAllowed = post.privacy === "public" || (post.privacy === "password" && password && post.password === password);
+    if (!isAllowed) continue;
     if (post.coverPhotoId === photoId) return post.userId;
     const photos = Array.isArray(post.photos) ? post.photos : [];
     if (photos.some((photo: any) => photo?.id === photoId && photo?.included !== false)) {
@@ -189,7 +209,8 @@ async function canServePublicPhoto(photoId: string) {
 }
 
 router.get("/public/images/:photoId", async (req, res) => {
-  const userId = await canServePublicPhoto(req.params.photoId);
+  const password = typeof req.query.password === "string" ? req.query.password : undefined;
+  const userId = await canServePublicPhoto(req.params.photoId, password);
   if (!userId) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -228,10 +249,7 @@ router.get("/public/:username", async (req, res) => {
     settings: settingsPayload(settings),
     posts: posts
       .filter(post => post.privacy !== "private")
-      .map(post => ({
-        ...postPayload(post, false),
-        ...publicBlogPhotos(post, true),
-      })),
+      .map(publicListPostPayload),
   });
 });
 
@@ -251,12 +269,15 @@ router.get("/public/:username/:slug", async (req, res) => {
     res.status(404).json({ error: "Post not found" });
     return;
   }
-  if (post.privacy === "password" && req.query.password !== post.password) {
+  const suppliedPassword = typeof req.query.password === "string" ? req.query.password : undefined;
+  if (post.privacy === "password" && (!post.password || suppliedPassword !== post.password)) {
     res.json({
       settings: settingsPayload(settings),
       post: {
         ...postPayload(post, false),
         body: "",
+        opening: "",
+        coverImageUrl: undefined,
         photos: [],
         passwordRequired: true,
       },
@@ -267,7 +288,7 @@ router.get("/public/:username/:slug", async (req, res) => {
     settings: settingsPayload(settings),
     post: {
       ...postPayload(post, false),
-      ...publicBlogPhotos(post),
+      ...publicBlogPhotos(post, { password: suppliedPassword }),
     },
   });
 });
@@ -330,7 +351,7 @@ router.post("/public-sync", async (req, res) => {
       eq(blogPosts.id, String(post.id)),
       eq(blogPosts.userId, userId),
     ));
-    const isPublished = post.status === "published";
+    const isPublished = post.status === "published" && (post.privacy !== "password" || Boolean(String(post.password ?? "").trim()));
     const values = {
       ...postValues(userId, {
         ...post,
@@ -483,8 +504,13 @@ router.put("/posts/:id", async (req, res) => {
     res.status(404).json({ error: "Post not found" });
     return;
   }
+  const values = postValues(userId, req.body, existing);
+  if (values.status === "published" && values.privacy === "password" && !values.password?.trim()) {
+    res.status(400).json({ error: "A password is required before publishing a password-protected post" });
+    return;
+  }
   const [row] = await db.update(blogPosts)
-    .set(postValues(userId, req.body, existing))
+    .set(values)
     .where(and(eq(blogPosts.id, req.params.id), eq(blogPosts.userId, userId)))
     .returning();
   res.json(postPayload(row, true));
@@ -498,11 +524,16 @@ router.post("/posts/:id/publish", async (req, res) => {
     res.status(404).json({ error: "Post not found" });
     return;
   }
-  const publicPhotos = publicBlogPhotos(existing);
+  const nextPrivacy = req.body.privacy === "password" ? "password" : "public";
+  if (nextPrivacy === "password" && !existing.password?.trim()) {
+    res.status(400).json({ error: "A password is required before publishing a password-protected post" });
+    return;
+  }
+  const publicPhotos = publicBlogPhotos(existing, { password: existing.password ?? undefined });
   const [row] = await db.update(blogPosts)
     .set({
       status: "published",
-      privacy: req.body.privacy === "password" ? "password" : "public",
+      privacy: nextPrivacy,
       coverImageUrl: publicPhotos.coverImageUrl,
       photos: publicPhotos.photos,
       updatedAt: now,
