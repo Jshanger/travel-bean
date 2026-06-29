@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, blogPosts, placePhotos, travelBlogSettings } from "@workspace/db";
+import { db, blogPosts, placePhotos, travelBlogSettings, userSubscriptions } from "@workspace/db";
 import { and, eq, notInArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { loadObject } from "../utils/storage";
@@ -29,6 +29,19 @@ function allowedLocalPublishUsernames() {
 function canPublishLocalUsername(username: string) {
   const allowed = allowedLocalPublishUsernames();
   return allowed.includes("*") || allowed.includes(username);
+}
+
+function isProActive(sub: { isPro: boolean; proUntil: Date | null } | undefined) {
+  if (!sub?.isPro) return false;
+  if (!sub.proUntil) return true;
+  return sub.proUntil > new Date();
+}
+
+async function requirePremiumPublishing(userId: string, res: any) {
+  const [sub] = await db.select().from(userSubscriptions).where(eq(userSubscriptions.userId, userId));
+  if (isProActive(sub)) return true;
+  res.status(402).json({ error: "Premium is required to publish public blog posts" });
+  return false;
 }
 
 function localPublishUserId(username: string) {
@@ -518,6 +531,7 @@ router.put("/posts/:id", async (req, res) => {
 
 router.post("/posts/:id/publish", async (req, res) => {
   const userId = (req as any).userId;
+  if (!(await requirePremiumPublishing(userId, res))) return;
   const now = new Date();
   const [existing] = await db.select().from(blogPosts).where(and(eq(blogPosts.id, req.params.id), eq(blogPosts.userId, userId)));
   if (!existing) {

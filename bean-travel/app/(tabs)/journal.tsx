@@ -12,7 +12,7 @@ import ViewShot from 'react-native-view-shot';
 import BeanCollageCard from '@/components/BeanCollageCard';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
 import PremiumModal from '@/components/PremiumModal';
-import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { BeanPhoto, PromptResponse, VisitedPlace } from '@/types';
 import { persistBeanPhotos } from '@/utils/photoPersistence';
 import {
@@ -325,10 +325,6 @@ export default function JournalScreen() {
       const draft = await createBlogDraftFromPlace(selectedBean.id);
       router.push({ pathname: '/blog/editor/[id]', params: { id: draft.id } } as any);
     } catch (error: any) {
-      if (error?.name === BLOG_POST_LIMIT_ERROR) {
-        setPremiumVisible(true);
-        return;
-      }
       Alert.alert('Could not create blog draft', error?.message ?? 'Please try again.');
     }
   }

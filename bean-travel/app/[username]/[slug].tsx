@@ -2,9 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import SocialShareSheet, { type SocialSharePayload } from '@/components/SocialShareSheet';
 import type { BlogPost, TravelBlogSettings } from '@/types';
-import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, formatPublicUsername, publicBlogUrl, sanitizeBlogUsername } from '@/utils/travelBlog';
 import { formatDate } from '@/utils/travelBeanMvp';
 
@@ -23,6 +23,7 @@ export default function PublicBlogPost() {
   const [passwordAttempted, setPasswordAttempted] = useState(false);
   const [remotePost, setRemotePost] = useState<{ settings: TravelBlogSettings; post: BlogPost & { passwordRequired?: boolean } } | null>(null);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
   const requested = sanitizeBlogUsername(String(params.username ?? ''));
   const post = remotePost?.post;
   const activeSettings = remotePost?.settings;
@@ -31,22 +32,23 @@ export default function PublicBlogPost() {
 
   async function sharePost() {
     if (!activeSettings || !post) return;
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(activeSettings, post),
       title: post.title,
       text: post.subtitle || activeSettings.title,
+      mediaUrl: post.coverImageUrl,
+      kind: 'post',
     });
-    if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
   }
 
   async function shareBlog() {
     if (!activeSettings) return;
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(activeSettings),
       title: activeSettings.title || 'Travel Bean Blog',
       text: activeSettings.intro,
+      kind: 'blog',
     });
-    if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
   }
 
   useEffect(() => {
@@ -94,7 +96,8 @@ export default function PublicBlogPost() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.nav}>
         <TouchableOpacity style={styles.brandRow} onPress={() => router.push(blogPath(activeSettings) as any)} activeOpacity={0.86}>
           <View style={styles.brandDot} />
@@ -180,7 +183,9 @@ export default function PublicBlogPost() {
         )}
       </View>
       <Text style={styles.footer}>Made with Travel Bean</Text>
-    </ScrollView>
+      </ScrollView>
+      <SocialShareSheet visible={Boolean(sharePayload)} payload={sharePayload} onClose={() => setSharePayload(null)} />
+    </>
   );
 }
 

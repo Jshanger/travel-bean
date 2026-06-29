@@ -5,10 +5,10 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumModal from '@/components/PremiumModal';
-import { BLOG_POST_LIMIT_ERROR, useApp } from '@/context/AppContext';
+import SocialShareSheet, { type SocialSharePayload } from '@/components/SocialShareSheet';
+import { BLOG_PUBLISHING_PREMIUM_ERROR, useApp } from '@/context/AppContext';
 import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 import type { BlogPost, VisitedPlace } from '@/types';
-import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, publicBlogUrl } from '@/utils/travelBlog';
 import { beanTitle, formatDate, primaryPhoto } from '@/utils/travelBeanMvp';
 
@@ -61,9 +61,10 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [emailingDashboardLink, setEmailingDashboardLink] = useState(false);
   const [dashboardLinkStatus, setDashboardLinkStatus] = useState<'idle' | 'sent' | 'draft' | 'failed'>('idle');
+  const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
   const { isSignedIn } = useTravelAuth();
   const { user } = useTravelUser();
-  const { blogSettings, blogPosts, places, userProfile, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
+  const { blogSettings, blogPosts, places, userProfile, isPremium, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
@@ -77,6 +78,10 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   }
 
   async function ensurePublicBlogSettings() {
+    if (!isPremium) {
+      setPremiumVisible(true);
+      return null;
+    }
     if (!blogUrl) {
       Alert.alert('Set your blog username', 'Choose a username before sharing your public blog link.');
       return null;
@@ -85,6 +90,10 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
       const synced = await syncBlogToCloud();
       return synced.settings;
     } catch (error: any) {
+      if (error?.name === BLOG_PUBLISHING_PREMIUM_ERROR) {
+        setPremiumVisible(true);
+        return null;
+      }
       Alert.alert('Could not publish blog', error?.message ?? 'Please try again once you are online.');
       return null;
     }
@@ -95,12 +104,12 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
     if (!publicSettings) {
       return;
     }
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(publicSettings),
       title: publicSettings.title || 'Travel Bean Blog',
       text: publicSettings.intro,
+      kind: 'blog',
     });
-    if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
   }
 
   async function viewPublicBlog() {
@@ -110,12 +119,13 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   }
 
   async function sharePost(post: BlogPost, settings: typeof blogSettings = blogSettings) {
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(settings, post),
       title: post.title,
       text: post.subtitle || settings.title,
+      mediaUrl: post.coverImageUrl,
+      kind: 'post',
     });
-    if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
   }
 
   async function sendDashboardLink() {
@@ -164,10 +174,6 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
       const draft = await createBlogDraftFromPlace(bean.id);
       router.push({ pathname: '/blog/editor/[id]', params: { id: draft.id } } as any);
     } catch (error: any) {
-      if (error?.name === BLOG_POST_LIMIT_ERROR) {
-        setPremiumVisible(true);
-        return;
-      }
       Alert.alert('Could not create draft', error?.message ?? 'Please try again.');
     }
   }
@@ -180,10 +186,6 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
     <>
       <ScrollView style={styles.screen} contentContainerStyle={[styles.content, { paddingTop: top, paddingBottom: bottomNavHeight + 44 }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/journal' as any)} activeOpacity={0.86}>
-            <Feather name="chevron-left" size={23} color={INK} />
-            <Text style={styles.backButtonText}>Journal</Text>
-          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.title}>Blog Dashboard</Text>
             <Text style={styles.subtitle}>Write, edit, and publish your Travel Bean Blog.</Text>
@@ -197,11 +199,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
           </View>
           <View style={styles.dashboardToolCopy}>
             <Text style={styles.dashboardToolTitle}>Public reader blog</Text>
-            <Text style={styles.dashboardToolText}>
-              {isSignedIn
-                ? 'This is the link other people use to read your published posts.'
-                : 'Create, edit, and publish from the app. Readers only see posts after you publish them online.'}
-            </Text>
+            <Text style={styles.dashboardToolText}>This is the link other people use to read your published Premium posts.</Text>
             <Text style={styles.publicLink}>{publicReaderLinkText}</Text>
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.primaryButton} onPress={shareBlog} activeOpacity={0.86}>
@@ -296,6 +294,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
         />
       </ScrollView>
       <PremiumModal visible={premiumVisible} mode="general" onClose={() => setPremiumVisible(false)} />
+      <SocialShareSheet visible={Boolean(sharePayload)} payload={sharePayload} onClose={() => setSharePayload(null)} />
       <BlogBottomNav bottomInset={insets.bottom} />
     </>
   );

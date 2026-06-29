@@ -4,7 +4,7 @@ import React from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
 import { useApp } from '@/context/AppContext';
-import { FREE_BLOG_POST_LIMIT, type SubscriptionPlan } from '@/utils/premium';
+import { PREMIUM_STORAGE_MARKETING_BODY, PREMIUM_STORAGE_MARKETING_TITLE, type SubscriptionPlan } from '@/utils/premium';
 
 const INK = '#2A1714';
 const MUTED = '#7B6258';
@@ -25,15 +25,15 @@ interface Props {
 const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
   general: {
     title: 'Publish Your Travel Bean Blog',
-    subtitle: `Make ${FREE_BLOG_POST_LIMIT} blog posts free, then upgrade for unlimited publishing, shareable links, and HD exports.`,
+    subtitle: 'Upgrade to publish your public Travel Bean Blog, share reader links, HD exports, and room for thousands of memories.',
   },
   templates: {
     title: 'Unlock Blog Publishing',
-    subtitle: `Create Beans for free and make ${FREE_BLOG_POST_LIMIT} blog posts before upgrading for unlimited publishing.`,
+    subtitle: 'Create Beans and draft blog posts for free. Premium unlocks public publishing.',
   },
   limit: {
     title: "You've used your 10 free Beans this month",
-    subtitle: 'Upgrade for unlimited Beans, public blog posts, and HD exports.',
+    subtitle: 'Upgrade for unlimited Beans, public blog posts, HD exports, and room for thousands of memories.',
   },
   export: {
     title: 'Want HD export?',
@@ -47,7 +47,8 @@ const COPY: Record<PremiumMode, { title: string; subtitle: string }> = {
 
 const BENEFITS: Array<{ title: string; body: string; icon: keyof typeof Feather.glyphMap }> = [
   { title: 'Unlimited Beans', body: 'Create as many memories as you like.', icon: 'repeat' },
-  { title: 'Unlimited Blog Posts', body: `Your first ${FREE_BLOG_POST_LIMIT} blog posts are free. Premium removes the limit.`, icon: 'globe' },
+  { title: 'Unlimited Blog Publishing', body: 'Publish your Travel Bean Blog and individual posts for readers.', icon: 'globe' },
+  { title: PREMIUM_STORAGE_MARKETING_TITLE, body: PREMIUM_STORAGE_MARKETING_BODY, icon: 'database' },
   { title: 'Public Share Links', body: 'Share your posts with anyone in a browser.', icon: 'link' },
   { title: 'HD Export', body: 'Save sharper, cleaner memory cards.', icon: 'download-cloud' },
 ];

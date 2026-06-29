@@ -6,6 +6,7 @@ import {
   integer,
   jsonb,
   boolean,
+  bigint,
 } from "drizzle-orm/pg-core";
 
 export const places = pgTable("places", {
@@ -55,6 +56,7 @@ export const placePhotos = pgTable("place_photos", {
   userId: text("user_id").notNull(),
   placeId: text("place_id").notNull(),
   objectPath: text("object_path").notNull(),
+  byteSize: bigint("byte_size", { mode: "number" }).notNull().default(0),
   caption: text("caption").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

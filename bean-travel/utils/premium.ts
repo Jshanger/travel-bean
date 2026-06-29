@@ -10,7 +10,9 @@ export interface UserPremiumState {
 }
 
 export const MONTHLY_BEAN_LIMIT = 10;
-export const FREE_BLOG_POST_LIMIT = 2;
+export const PREMIUM_STORAGE_GB = 5;
+export const PREMIUM_STORAGE_MARKETING_TITLE = 'Room for thousands of travel memories';
+export const PREMIUM_STORAGE_MARKETING_BODY = `Includes ${PREMIUM_STORAGE_GB}GB optimized photo storage for photos, galleries, and published stories.`;
 
 export function currentMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

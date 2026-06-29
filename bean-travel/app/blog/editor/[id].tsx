@@ -4,9 +4,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PremiumModal from '@/components/PremiumModal';
+import SocialShareSheet, { type SocialSharePayload } from '@/components/SocialShareSheet';
 import { useApp } from '@/context/AppContext';
 import type { BlogPost, BlogPrivacy } from '@/types';
-import { sharePublicLink } from '@/utils/shareLinks';
 import { blogPath, generateBlogDraftFromBean, publicBlogUrl } from '@/utils/travelBlog';
 
 const INK = '#2A1714';
@@ -20,11 +21,13 @@ export default function BlogEditorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { places, blogSettings, blogPosts, getBlogPostById, editBlogPost, publishBlogPostById, unpublishBlogPost } = useApp();
+  const { places, blogSettings, blogPosts, isPremium, getBlogPostById, editBlogPost, publishBlogPostById, unpublishBlogPost } = useApp();
   const post = params.id ? getBlogPostById(String(params.id)) : undefined;
   const [draft, setDraft] = useState<BlogPost | undefined>(post);
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [premiumVisible, setPremiumVisible] = useState(false);
+  const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
   const link = useMemo(() => draft ? publicBlogUrl(blogSettings, draft) : '', [blogSettings, draft]);
   const blogLink = useMemo(() => publicBlogUrl(blogSettings), [blogSettings]);
 
@@ -80,6 +83,11 @@ export default function BlogEditorScreen() {
 
   async function publish() {
     if (!draft) return;
+    if (!isPremium) {
+      setPremiumVisible(true);
+      setSaveNotice({ type: 'error', message: 'Publishing is Premium-only. You can keep editing this draft for free.' });
+      return;
+    }
     const publishPrivacy: BlogPrivacy = draft.privacy === 'password' ? 'password' : 'public';
     const draftToPublish: BlogPost = {
       ...draftForSave(draft),
@@ -153,22 +161,23 @@ export default function BlogEditorScreen() {
 
   async function sharePostLink() {
     if (!draft || draft.status !== 'published') return;
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(blogSettings, draft),
       title: draft.title,
       text: draft.subtitle || blogSettings.title,
+      mediaUrl: draft.coverImageUrl,
+      kind: 'post',
     });
-    if (result === 'copied') Alert.alert('Post link copied', 'The public post link is ready to paste.');
   }
 
   async function shareBlogLink() {
     if (!blogSettings.username) return;
-    const result = await sharePublicLink({
+    setSharePayload({
       url: publicBlogUrl(blogSettings),
       title: blogSettings.title || 'Travel Bean Blog',
       text: blogSettings.intro,
+      kind: 'blog',
     });
-    if (result === 'copied') Alert.alert('Blog link copied', 'The public blog link is ready to paste.');
   }
 
   function refreshFromJournal() {
@@ -198,18 +207,19 @@ export default function BlogEditorScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: (Platform.OS === 'web' ? 42 : insets.top + 18), paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
-          <Feather name="chevron-left" size={23} color={INK} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Blog Draft</Text>
-          <Text style={styles.subtitle}>{draft.status === 'published' ? 'Published on your Travel Bean Blog' : 'Private until you publish it'}</Text>
+    <>
+      <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: (Platform.OS === 'web' ? 42 : insets.top + 18), paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
+            <Feather name="chevron-left" size={23} color={INK} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Blog Draft</Text>
+            <Text style={styles.subtitle}>{draft.status === 'published' ? 'Published on your Travel Bean Blog' : 'Private until you publish it'}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.card}>
+        <View style={styles.card}>
         {draft.coverImageUrl ? <Image source={{ uri: draft.coverImageUrl }} style={styles.cover} contentFit="cover" contentPosition="top center" /> : null}
         <Text style={styles.label}>Blog title</Text>
         <TextInput value={draft.title} onChangeText={title => patch({ title })} style={styles.input} />
@@ -322,8 +332,11 @@ export default function BlogEditorScreen() {
             <Text style={styles.publishText}>Publish to Travel Blog</Text>
           </TouchableOpacity>
         )}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+      <PremiumModal visible={premiumVisible} mode="general" onClose={() => setPremiumVisible(false)} />
+      <SocialShareSheet visible={Boolean(sharePayload)} payload={sharePayload} onClose={() => setSharePayload(null)} />
+    </>
   );
 }
 

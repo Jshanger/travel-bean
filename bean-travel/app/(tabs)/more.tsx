@@ -8,11 +8,13 @@ import PremiumModal from '@/components/PremiumModal';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
+import { PREMIUM_STORAGE_MARKETING_BODY, PREMIUM_STORAGE_MARKETING_TITLE } from '@/utils/premium';
 
 const PRO_FEATURES = [
-  { icon: 'globe' as const, label: 'Unlimited blog posts', body: 'Publish beyond your first 2 free posts.' },
+  { icon: 'globe' as const, label: 'Unlimited blog publishing', body: 'Publish your blog and individual posts for readers.' },
   { icon: 'edit-3' as const, label: 'Fully editable blog', body: 'Edit posts, drafts, photos, and settings on web.' },
   { icon: 'link' as const, label: 'Public blog links', body: 'Share your blog and individual posts with readers.' },
+  { icon: 'database' as const, label: PREMIUM_STORAGE_MARKETING_TITLE, body: PREMIUM_STORAGE_MARKETING_BODY },
   { icon: 'repeat' as const, label: 'Unlimited Beans', body: 'Keep creating beyond the free monthly limit.' },
   { icon: 'download-cloud' as const, label: 'HD export', body: 'Save sharper, cleaner memory cards.' },
 ];
@@ -82,8 +84,12 @@ export default function MoreScreen() {
             <Text style={styles.heroStatLabel}>{isPro ? 'Beans' : 'Free Beans/mo'}</Text>
           </View>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>{isPro ? '∞' : '2'}</Text>
-            <Text style={styles.heroStatLabel}>{isPro ? 'Blog posts' : 'Free blog posts'}</Text>
+            <Text style={styles.heroStatValue}>{isPro ? '∞' : 'Drafts'}</Text>
+            <Text style={styles.heroStatLabel}>{isPro ? 'Public posts' : 'Preview only'}</Text>
+          </View>
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>1000+</Text>
+            <Text style={styles.heroStatLabel}>Memories</Text>
           </View>
           <View style={styles.heroStat}>
             <Text style={styles.heroStatValue}>Web</Text>
@@ -197,7 +203,7 @@ export default function MoreScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.upgradeTitle}>Travel Bean Premium</Text>
-              <Text style={styles.upgradePrice}>$6.99 / month · $49.99 / year</Text>
+              <Text style={styles.upgradePrice}>£6.99 / month · £49.99 / year</Text>
             </View>
             <View style={styles.upgradeBtn}>
               <Text style={styles.upgradeBtnTxt}>Upgrade</Text>

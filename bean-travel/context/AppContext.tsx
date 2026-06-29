@@ -4,7 +4,7 @@ import { lookupCoords } from '@/constants/cityCoords';
 import { useSubscription } from '@/services/revenuecat';
 import { BeanPhoto, BlogPost, BucketItem, BucketStatus, BucketTag, TravelBlogSettings, Trip, ItineraryItem, TripComment, VisitedPlace } from '@/types';
 import { encodePersistedBeanNotes, hydratePersistedBean } from '@/utils/beanPersistence';
-import { defaultPremiumState, FREE_BLOG_POST_LIMIT, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
+import { defaultPremiumState, normalizePremiumState, remainingFreeBeans, type SubscriptionPlan, type UserPremiumState } from '@/utils/premium';
 import { createDefaultBlogSettings, generateBlogDraftFromBean, publishBlogPost, uniqueBlogSlug } from '@/utils/travelBlog';
 import { useTravelAuth, useTravelUser } from '@/hooks/useTravelAuth';
 
@@ -18,7 +18,7 @@ const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
 
-export const BLOG_POST_LIMIT_ERROR = 'BLOG_POST_LIMIT_REACHED';
+export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
 type TripDraft = Omit<Trip, 'id' | 'createdAt' | 'shareId' | 'itinerary'> & {
   itinerary?: Array<Omit<ItineraryItem, 'id' | 'votes' | 'comments'> | ItineraryItem>;
@@ -830,12 +830,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!place) throw new Error('Journal entry not found');
     const existing = blogPosts.find(post => post.sourcePlaceId === placeId && post.status === 'draft');
     if (existing) return existing;
-    const bloggedBeanIds = new Set(blogPosts.map(post => post.sourcePlaceId).filter(Boolean));
-    if (!isPremium && bloggedBeanIds.size >= FREE_BLOG_POST_LIMIT) {
-      const error = new Error(`You can make ${FREE_BLOG_POST_LIMIT} Travel Bean blog posts for free. Upgrade to publish more travel stories.`);
-      error.name = BLOG_POST_LIMIT_ERROR;
-      throw error;
-    }
     const draft = generateBlogDraftFromBean(place, blogPosts);
     if (!useLocalData) {
       try {
@@ -852,7 +846,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     await storeBlogPosts([draft, ...blogPosts]);
     return draft;
-  }, [blogPosts, getToken, isPremium, places, storeBlogPosts, useLocalData]);
+  }, [blogPosts, getToken, places, storeBlogPosts, useLocalData]);
 
   const editBlogPost = useCallback(async (id: string, post: Partial<BlogPost>) => {
     const now = new Date().toISOString();
@@ -892,6 +886,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!blogSettings.username) {
       throw new Error('Choose a blog username before publishing.');
     }
+    if (!isPremium) {
+      const error = new Error('Publishing your public Travel Bean Blog is a Premium feature. You can keep drafting for free.');
+      error.name = BLOG_PUBLISHING_PREMIUM_ERROR;
+      throw error;
+    }
     const postToPublish = { ...currentPost, ...postOverride, id };
     if (useLocalData) {
       const publishedPost = publishBlogPost(postToPublish, postToPublish.privacy === 'password' ? 'password' : 'public');
@@ -929,7 +928,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
     await storeBlogPosts(blogPosts.map(item => item.id === id ? saved : item));
     return saved;
-  }, [blogPosts, blogSettings, getToken, storeBlogPosts, storeBlogSettings, useLocalData]);
+  }, [blogPosts, blogSettings, getToken, isPremium, storeBlogPosts, storeBlogSettings, useLocalData]);
 
   const unpublishBlogPost = useCallback(async (id: string) => {
     if (!useLocalData) {
@@ -972,6 +971,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const syncBlogToCloud = useCallback(async () => {
     if (!blogSettings.username) {
       throw new Error('Choose a blog username before publishing.');
+    }
+    if (!isPremium) {
+      const error = new Error('Publishing your public Travel Bean Blog is a Premium feature. You can keep drafting for free.');
+      error.name = BLOG_PUBLISHING_PREMIUM_ERROR;
+      throw error;
     }
     if (useLocalData) {
       const synced = await publishLocalBlogSnapshot(
@@ -1016,7 +1020,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storeBlogSettings(savedSettings);
     await storeBlogPosts(syncedPosts);
     return { settings: savedSettings, posts: syncedPosts };
-  }, [blogPosts, blogSettings, getToken, storeBlogPosts, storeBlogSettings, useLocalData]);
+  }, [blogPosts, blogSettings, getToken, isPremium, storeBlogPosts, storeBlogSettings, useLocalData]);
 
   const emailDashboardLink = useCallback(async (email?: string) => {
     if (useLocalData) throw new Error('Cloud account is required');

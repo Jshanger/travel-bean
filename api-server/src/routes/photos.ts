@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 import { db, placePhotos, places } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { deleteObject, isR2Configured, loadObject, makeSignedUrl, saveObject } from "../utils/storage";
 
 const router = Router();
 router.use(requireAuth);
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const ACCOUNT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function uid() {
@@ -25,6 +26,14 @@ async function attachImageUrl(row: typeof placePhotos.$inferSelect) {
   } catch {
     return { ...row, imageUrl: null };
   }
+}
+
+async function storedPhotoBytesForUser(userId: string) {
+  const [usage] = await db
+    .select({ bytes: sql<number>`coalesce(sum(${placePhotos.byteSize}), 0)` })
+    .from(placePhotos)
+    .where(eq(placePhotos.userId, userId));
+  return Number(usage?.bytes ?? 0);
 }
 
 // POST /photos/upload — receive raw image bytes, upload to GCS, save record
@@ -67,6 +76,11 @@ router.post("/upload", async (req, res) => {
   if (tooLarge) { res.status(413).json({ error: "Image is too large" }); return; }
   const imageBuffer = Buffer.concat(chunks);
   if (!imageBuffer.length) { res.status(400).json({ error: "Empty image body" }); return; }
+  const currentStorageBytes = await storedPhotoBytesForUser(userId);
+  if (currentStorageBytes + imageBuffer.length > ACCOUNT_STORAGE_LIMIT_BYTES) {
+    res.status(413).json({ error: "Photo storage limit reached. You have used your 5GB optimized photo storage. Delete older photos or contact Travel Bean for more storage." });
+    return;
+  }
 
   const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
   const objectId = randomUUID();
@@ -75,7 +89,7 @@ router.post("/upload", async (req, res) => {
   await saveObject(objectPath, imageBuffer, contentType);
 
   const [row] = await db.insert(placePhotos).values({
-    id: uid(), userId, placeId, objectPath, caption: "",
+    id: uid(), userId, placeId, objectPath, byteSize: imageBuffer.length, caption: "",
   }).returning();
 
   res.json(await attachImageUrl(row));

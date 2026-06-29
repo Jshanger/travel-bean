@@ -11,6 +11,7 @@ import PremiumModal from '@/components/PremiumModal';
 import { lookupCoords } from '@/constants/cityCoords';
 import { useApp } from '@/context/AppContext';
 import { VisitedPlace } from '@/types';
+import { PREMIUM_STORAGE_MARKETING_BODY, PREMIUM_STORAGE_MARKETING_TITLE } from '@/utils/premium';
 import { allBeans, beanTitle, formatDate, isUnfinishedBeanDraft, primaryPhoto, SAMPLE_BEANS } from '@/utils/travelBeanMvp';
 
 const INK = '#2A1714';
@@ -56,10 +57,6 @@ export default function HomeScreen() {
     } as any);
   }
 
-  function openDashboardAccess() {
-    router.push('/blog' as any);
-  }
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: top + 14, paddingBottom: bottom }} showsVerticalScrollIndicator={false}>
       <View style={styles.phoneShell}>
@@ -74,16 +71,6 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.primaryButton} onPress={startBean} activeOpacity={0.86}>
           <Feather name="plus" size={32} color="#fff" />
           <Text style={styles.primaryText}>Create a Bean</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dashboardButton} onPress={openDashboardAccess} activeOpacity={0.86}>
-          <View style={styles.dashboardButtonIcon}>
-            <Feather name="layout" size={22} color={ORANGE} />
-          </View>
-          <View style={styles.dashboardButtonCopy}>
-            <Text style={styles.dashboardButtonText}>Open Blog Dashboard</Text>
-            <Text style={styles.dashboardButtonSub}>Edit drafts, publish posts, and manage your Travel Bean Blog.</Text>
-          </View>
-          <Feather name="arrow-right" size={22} color={INK} />
         </TouchableOpacity>
         <View style={[styles.sparkle, styles.sparkleLeft]} />
         <View style={[styles.sparkle, styles.sparkleRight]} />
@@ -164,7 +151,7 @@ export default function HomeScreen() {
             <Text style={styles.premiumBody}>
               {isPremium
                 ? 'Create, edit, and publish blog posts from your saved Beans.'
-                : 'Create Beans for free. Your first 2 blog posts are included, then Premium unlocks unlimited publishing.'}
+                : 'Create Beans and draft stories for free. Premium unlocks public blog publishing.'}
             </Text>
             {!isPremium && <Text style={styles.freeCounter}>{freeBeansRemaining} free Bean{freeBeansRemaining === 1 ? '' : 's'} left this month</Text>}
           </View>
@@ -179,10 +166,11 @@ export default function HomeScreen() {
           <View style={styles.benefitsCard}>
             <Text style={styles.benefitsTitle}>Premium is for publishing</Text>
             <View style={styles.benefitsGrid}>
-              <PremiumBenefit icon="send" title="Unlimited Blog Posts" body="Publish more than the 2 free Travel Bean blog posts." />
+              <PremiumBenefit icon="send" title="Unlimited Blog Publishing" body="Publish your Travel Bean Blog and individual posts for readers." />
               <PremiumBenefit icon="edit-3" title="Fully Editable Blog" body="Edit titles, stories, photos, captions, tags, and drafts." />
               <PremiumBenefit icon="monitor" title="Web Dashboard" body="Manage posts and publishing from a laptop." />
               <PremiumBenefit icon="globe" title="Public Travel Blog" body="Share a clean blog page people can open in any browser." />
+              <PremiumBenefit icon="database" title={PREMIUM_STORAGE_MARKETING_TITLE} body={PREMIUM_STORAGE_MARKETING_BODY} />
               <PremiumBenefit icon="lock" title="Publishing Control" body="Keep entries private until you choose to publish." />
             </View>
           </View>
@@ -292,7 +280,7 @@ const styles = StyleSheet.create({
   phoneShell: { width: '100%', maxWidth: 520, alignSelf: 'center' },
   iconButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   noticeDot: { position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 5, backgroundColor: ORANGE },
-  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 676, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16, position: 'relative' },
+  heroCard: { marginHorizontal: 0, marginBottom: 20, minHeight: 572, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 16, position: 'relative' },
   settingsButton: { position: 'absolute', right: 18, top: 4, zIndex: 5, width: 42, height: 42, borderRadius: 21, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, alignItems: 'center', justifyContent: 'center' },
   heroKicker: { color: '#874716', fontSize: 20, fontFamily: 'Inter_500Medium', marginBottom: 10, textAlign: 'center' },
   heroTitle: { color: INK, fontSize: 39, lineHeight: 45, fontFamily: 'Inter_700Bold', marginBottom: 16, textAlign: 'center', maxWidth: 440 },
@@ -301,11 +289,6 @@ const styles = StyleSheet.create({
   heroDecor: { position: 'absolute', left: 0, top: 0 },
   primaryButton: { alignSelf: 'center', width: '100%', maxWidth: 438, height: 78, borderRadius: 39, backgroundColor: ORANGE, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingHorizontal: 22, marginTop: 16, shadowColor: '#D8491E', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.18, shadowRadius: 22, elevation: 6 },
   primaryText: { color: '#fff', fontSize: 25, fontFamily: 'Inter_700Bold' },
-  dashboardButton: { alignSelf: 'center', width: '100%', maxWidth: 438, minHeight: 92, borderRadius: 30, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 13, marginTop: 12 },
-  dashboardButtonIcon: { width: 48, height: 48, borderRadius: 20, backgroundColor: '#FFF1E6', alignItems: 'center', justifyContent: 'center' },
-  dashboardButtonCopy: { flex: 1, minWidth: 0 },
-  dashboardButtonText: { color: INK, fontSize: 18, lineHeight: 23, fontFamily: 'Inter_700Bold' },
-  dashboardButtonSub: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', marginTop: 3 },
   sparkle: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: '#F4B66F' },
   sparkleLeft: { left: 64, top: 362 },
   sparkleRight: { right: 54, top: 432 },
