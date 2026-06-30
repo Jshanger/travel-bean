@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import PassportMapPreview from '@/components/PassportMapPreview';
-import { lookupCoords } from '@/constants/cityCoords';
+import { resolvePlaceCoordinates } from '@/constants/cityCoords';
 import { VisitedPlace } from '@/types';
 
 interface Props {
@@ -12,14 +12,12 @@ interface Props {
 }
 
 export default function PlacesMap({ places, selectedPlaceId, onPlacePress }: Props) {
-  const mapped = places.filter(place => {
-    if (typeof place.latitude === 'number' && typeof place.longitude === 'number') return true;
-    return Boolean(
-      lookupCoords(place.name, place.country)
-      ?? lookupCoords(place.city ?? '', place.country)
-      ?? lookupCoords(place.country, place.country)
-    );
-  });
+  const mapped = places
+    .map(place => {
+      const coords = resolvePlaceCoordinates(place);
+      return coords ? { ...place, ...coords } : null;
+    })
+    .filter((place): place is VisitedPlace & { latitude: number; longitude: number } => Boolean(place));
 
   return (
     <View style={styles.container}>

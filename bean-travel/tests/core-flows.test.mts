@@ -34,6 +34,7 @@ import {
   hydratePersistedBean,
   splitPersistedBeanNotes,
 } from '../utils/beanPersistence.ts';
+import { resolvePlaceCoordinates } from '../constants/cityCoords.ts';
 
 test('creates a Travel Bean draft with mood and photo prompt reflections', () => {
   const draft = createTravelBeanDraft({
@@ -55,6 +56,32 @@ test('creates a Travel Bean draft with mood and photo prompt reflections', () =>
   assert.equal(draft.category, 'coffee_shop');
   assert.match(draft.notes, /Mood: Reflective, Cinematic/);
   assert.match(draft.notes, /A quiet pause between neon streets/);
+});
+
+test('known passport map places override stale saved coordinates', () => {
+  const bali = resolvePlaceCoordinates({
+    name: 'Bali',
+    country: 'Indonesia',
+    latitude: 48.8566,
+    longitude: 2.3522,
+  });
+  const kyoto = resolvePlaceCoordinates({
+    name: 'Kyoto, Japan',
+    country: 'Japan',
+    latitude: 52.3676,
+    longitude: 4.9041,
+  });
+  const fushimiInari = resolvePlaceCoordinates({
+    name: 'Fushimi Inari Taisha',
+    city: 'Kyoto',
+    country: 'Japan',
+    latitude: 34.9671,
+    longitude: 135.7727,
+  });
+
+  assert.deepEqual(bali, { latitude: -8.3405, longitude: 115.0920 });
+  assert.deepEqual(kyoto, { latitude: 35.0116, longitude: 135.7681 });
+  assert.deepEqual(fushimiInari, { latitude: 34.9671, longitude: 135.7727 });
 });
 
 test('creates Story Bean entries from selected photos and responses', () => {

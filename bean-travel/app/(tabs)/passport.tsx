@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlacesMap from '@/components/PlacesMap';
-import { lookupCoords } from '@/constants/cityCoords';
+import { resolvePlaceCoordinates } from '@/constants/cityCoords';
 import { useApp } from '@/context/AppContext';
 import { VisitedPlace } from '@/types';
 import { allBeans, beanTitle, formatDate, primaryPhoto } from '@/utils/travelBeanMvp';
@@ -179,10 +179,7 @@ export default function PassportScreen() {
 }
 
 function enrichPlaceCoords(place: VisitedPlace): VisitedPlace {
-  if (typeof place.latitude === 'number' && typeof place.longitude === 'number') return place;
-  const coords = lookupCoords(place.name, place.country)
-    ?? lookupCoords(place.city ?? '', place.country)
-    ?? lookupCoords(place.country, place.country);
+  const coords = resolvePlaceCoordinates(place);
   return coords ? { ...place, ...coords } : place;
 }
 

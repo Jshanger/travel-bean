@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
-import { lookupCoords } from '@/constants/cityCoords';
+import { resolvePlaceCoordinates } from '@/constants/cityCoords';
 import { COUNTRY_COORDS, countryToPath } from '@/constants/countryPaths';
 import { VisitedPlace } from '@/types';
 
@@ -439,14 +439,7 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
 }
 
 function resolvePlaceCoords(place: VisitedPlace): (VisitedPlace & { latitude: number; longitude: number }) | null {
-  if (typeof place.latitude === 'number' && typeof place.longitude === 'number') {
-    return place as VisitedPlace & { latitude: number; longitude: number };
-  }
-
-  const coords = lookupCoords(place.name, place.country)
-    ?? lookupCoords(place.city ?? '', place.country)
-    ?? lookupCoords(place.country, place.country);
-
+  const coords = resolvePlaceCoordinates(place);
   return coords ? { ...place, ...coords } : null;
 }
 

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import { COUNTRY_COORDS, countryToPath } from '@/constants/countryPaths';
-import { lookupCoords } from '@/constants/cityCoords';
+import { resolvePlaceCoordinates } from '@/constants/cityCoords';
 import { VisitedPlace } from '@/types';
 
 interface Props {
@@ -18,10 +18,7 @@ export default function PassportMapPreview({ places, selectedPlaceId, onPlacePre
   );
   const markers = useMemo(() => places
     .map(place => {
-      if (typeof place.latitude === 'number' && typeof place.longitude === 'number') return place;
-      const coords = lookupCoords(place.name, place.country)
-        ?? lookupCoords(place.city ?? '', place.country)
-        ?? lookupCoords(place.country, place.country);
+      const coords = resolvePlaceCoordinates(place);
       return coords ? { ...place, ...coords } : null;
     })
     .filter((place): place is VisitedPlace & { latitude: number; longitude: number } => Boolean(place))

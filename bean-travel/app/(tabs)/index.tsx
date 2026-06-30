@@ -8,7 +8,7 @@ import Svg, { Ellipse, G, Path } from 'react-native-svg';
 import CreateBeanMascot from '@/components/CreateBeanMascot';
 import HomeMap from '@/components/HomeMap';
 import PremiumModal from '@/components/PremiumModal';
-import { lookupCoords } from '@/constants/cityCoords';
+import { resolvePlaceCoordinates } from '@/constants/cityCoords';
 import { useApp } from '@/context/AppContext';
 import { VisitedPlace } from '@/types';
 import { PREMIUM_STORAGE_MARKETING_BODY, PREMIUM_STORAGE_MARKETING_TITLE } from '@/utils/premium';
@@ -266,8 +266,7 @@ function HomeHeroVisual() {
 }
 
 function enrichHomePlaceCoords(place: VisitedPlace): VisitedPlace {
-  if (typeof place.latitude === 'number' && typeof place.longitude === 'number') return place;
-  const coords = lookupCoords(place.name, place.country) ?? lookupCoords(place.city ?? '', place.country);
+  const coords = resolvePlaceCoordinates(place);
   return coords ? { ...place, ...coords } : place;
 }
 

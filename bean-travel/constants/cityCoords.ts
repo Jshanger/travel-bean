@@ -3,6 +3,14 @@ export interface Coords {
   longitude: number;
 }
 
+export interface PlaceCoordinateInput {
+  name?: string;
+  country?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 const CITY_COORDS: Record<string, Coords> = {
   // Europe
   'Lisbon': { latitude: 38.7169, longitude: -9.1399 },
@@ -50,6 +58,8 @@ const CITY_COORDS: Record<string, Coords> = {
   'Chiang Mai': { latitude: 18.7883, longitude: 98.9853 },
   'Phuket': { latitude: 7.9519, longitude: 98.3381 },
   'Bali': { latitude: -8.3405, longitude: 115.0920 },
+  'Ubud': { latitude: -8.5069, longitude: 115.2625 },
+  'Denpasar': { latitude: -8.6705, longitude: 115.2126 },
   'Yogyakarta': { latitude: -7.7956, longitude: 110.3695 },
   'Hanoi': { latitude: 21.0285, longitude: 105.8542 },
   'Ho Chi Minh City': { latitude: 10.8231, longitude: 106.6297 },
@@ -170,4 +180,39 @@ export function lookupCoords(cityName: string, countryName?: string): Coords | u
   return lookupIn(CITY_COORDS, cityName)
     ?? lookupIn(COUNTRY_COORDS, cityName)
     ?? lookupIn(COUNTRY_COORDS, countryName);
+}
+
+export function resolvePlaceCoordinates(place: PlaceCoordinateInput): Coords | undefined {
+  const existing = getExistingCoords(place);
+  const nameCoords = lookupIn(CITY_COORDS, place.name) ?? lookupIn(COUNTRY_COORDS, place.name);
+  const cityCoords = lookupIn(CITY_COORDS, place.city);
+  const fallbackCoords = nameCoords ?? cityCoords ?? lookupIn(COUNTRY_COORDS, place.country);
+
+  if (!existing) return fallbackCoords;
+  if (nameCoords && distanceKm(existing, nameCoords) > 100) return nameCoords;
+  if (cityCoords && distanceKm(existing, cityCoords) > 100) return cityCoords;
+
+  return existing;
+}
+
+function getExistingCoords(place: PlaceCoordinateInput): Coords | undefined {
+  if (typeof place.latitude !== 'number' || typeof place.longitude !== 'number') return undefined;
+  if (!Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return undefined;
+  if (Math.abs(place.latitude) > 90 || Math.abs(place.longitude) > 180) return undefined;
+  return { latitude: place.latitude, longitude: place.longitude };
+}
+
+function distanceKm(a: Coords, b: Coords) {
+  const radiusKm = 6371;
+  const dLat = toRadians(b.latitude - a.latitude);
+  const dLon = toRadians(b.longitude - a.longitude);
+  const lat1 = toRadians(a.latitude);
+  const lat2 = toRadians(b.latitude);
+  const haversine = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * radiusKm * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
 }
