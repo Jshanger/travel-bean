@@ -84,6 +84,16 @@ test('known passport map places override stale saved coordinates', () => {
   assert.deepEqual(fushimiInari, { latitude: 34.9671, longitude: 135.7727 });
 });
 
+test('passport map redraws when the selected place changes', () => {
+  const webMap = readFileSync(new URL('../components/PlacesMap.tsx', import.meta.url), 'utf8');
+  const nativeMap = readFileSync(new URL('../components/PassportMapPreview.tsx', import.meta.url), 'utf8');
+
+  assert.match(webMap, /const mapKey = `\$\{variant\}-\$\{selectedPlaceId \?\? 'all'\}-\$\{mapped\.length\}`/);
+  assert.match(webMap, /key: mapKey/);
+  assert.match(nativeMap, /const mapKey = selectedPlaceId \?\? 'all-places'/);
+  assert.match(nativeMap, /<Svg key=\{mapKey\}/);
+});
+
 test('creates Story Bean entries from selected photos and responses', () => {
   const entries = createStoryEntries([
     { photoId: 'a', prompt: 'What stayed with you?', response: 'The sound of rain on the awning.' },

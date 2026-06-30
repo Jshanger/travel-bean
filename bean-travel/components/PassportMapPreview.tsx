@@ -34,10 +34,11 @@ export default function PassportMapPreview({ places, selectedPlaceId, onPlacePre
     .sort((a, b) => Number(a.active) - Number(b.active)), [markerPositions, markers, selectedPlaceId]);
   const selectedMarker = markerItems.find(item => item.active);
   const viewBox = selectedMarker ? focusViewBox(selectedMarker.position) : '0 0 360 180';
+  const mapKey = selectedPlaceId ?? 'all-places';
 
   return (
     <View style={styles.container}>
-      <Svg width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+      <Svg key={mapKey} width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
         <Rect x="0" y="0" width="360" height="180" fill="#D9EFF7" />
         <G opacity={0.72}>
           <Path d="M0 34H360M0 90H360M0 146H360" stroke="#FFFFFF" strokeWidth="0.45" />

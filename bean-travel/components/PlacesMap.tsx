@@ -418,10 +418,12 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
 </body>
 </html>`;
   }, [isHomePreview, mapped, selectedPlaceId]);
+  const mapKey = `${variant}-${selectedPlaceId ?? 'all'}-${mapped.length}`;
 
   return (
     <View style={{ flex: 1 }}>
       {React.createElement('iframe', {
+        key: mapKey,
         srcDoc: html,
         style: {
           flex: 1,
