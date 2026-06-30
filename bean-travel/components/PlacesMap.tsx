@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { lookupCoords } from '@/constants/cityCoords';
+import { COUNTRY_COORDS, countryToPath } from '@/constants/countryPaths';
 import { VisitedPlace } from '@/types';
 
 interface Props {
@@ -54,6 +55,25 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
     const markerCoords = spreadMarkerCoords(mapped);
     const selectedIndex = selectedPlaceId ? mapped.findIndex(place => place.id === selectedPlaceId) : -1;
     const selectedCoords = selectedIndex >= 0 ? markerCoords[selectedIndex] : null;
+    const selectedZoom = isHomePreview ? 3.25 : 4.5;
+    const fitPadding = isHomePreview ? 38 : 72;
+    const fallbackCountries = Object.values(COUNTRY_COORDS)
+      .map(rings => `<path d="${countryToPath(rings)}" fill="#AFC8BE" stroke="#F7FBF7" stroke-width="0.42" />`)
+      .join('');
+    const fallbackMarkers = mapped.map((place, index) => {
+      const coords = markerCoords[index];
+      const x = clamp(((coords.longitude + 180) / 360) * 360, 9, 351);
+      const y = clamp(((90 - coords.latitude) / 180) * 180, 9, 171);
+      const active = place.id === selectedPlaceId;
+      return `
+        <g transform="translate(${x.toFixed(2)} ${y.toFixed(2)})">
+          ${active ? '<circle cx="0" cy="-1" r="15.5" fill="#F26A2E" opacity="0.18" /><circle cx="0" cy="-1" r="11.5" fill="none" stroke="#FFFDF8" stroke-width="2.6" />' : ''}
+          <circle cx="0" cy="0" r="${active ? '8.8' : '7.2'}" fill="#FFFFFF" opacity="${active ? '0.96' : '0.78'}" />
+          <path d="M0 8C-1.8 4.8-6.2 1.4-6.2-3.5A6.2 6.2 0 0 1 6.2-3.5C6.2 1.4 1.8 4.8 0 8Z" fill="${active ? '#183F4A' : '#F26A2E'}" stroke="#FFFFFF" stroke-width="${active ? '1.7' : '1.25'}" />
+          <circle cx="0" cy="-3.3" r="${active ? '2.45' : '2.1'}" fill="#FFFFFF" />
+        </g>
+      `;
+    }).join('');
     const markersJs = mapped.map((p, index) => {
       const coords = markerCoords[index];
       const color = CATEGORY_COLORS[p.category] ?? '#E8825A';
@@ -107,8 +127,14 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
-    #map { height: 100vh; width: 100vw; background: linear-gradient(180deg, #dff4e8 0%, #b9dfea 62%, #a9d5e3 100%); }
+    html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #D9EFF7; }
+    #map, #mapFallback { position: absolute; inset: 0; height: 100vh; width: 100vw; }
+    #map { z-index: 2; background: transparent; }
+    #mapFallback {
+      z-index: 1;
+      background: linear-gradient(180deg, #D9EFF7 0%, #C7D8EC 58%, #C3D5EA 100%);
+    }
+    #mapFallback svg { width: 100%; height: 100%; display: block; }
     #map:before {
       content: "";
       position: absolute;
@@ -129,17 +155,19 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
     }
     .leaflet-top.leaflet-left {
       left: auto;
-      right: 18px;
-      top: 112px;
+      right: 14px;
+      top: auto;
+      bottom: 24px;
     }
     .leaflet-control-zoom a {
-      width: 38px !important;
-      height: 38px !important;
-      line-height: 38px !important;
+      width: 34px !important;
+      height: 34px !important;
+      line-height: 34px !important;
       border: none !important;
       color: #183F4A !important;
       background: rgba(255,255,255,.92) !important;
       font-weight: 800;
+      font-size: 19px;
     }
     .leaflet-tile {
       filter: saturate(1.08) contrast(1.02) brightness(1.04) hue-rotate(8deg);
@@ -154,6 +182,11 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
     .leaflet-popup-tip-container { display: none; }
     .leaflet-control-attribution { font-size: 10px; opacity: 0.6; }
     .leaflet-container { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .leaflet-container,
+    .leaflet-pane,
+    .leaflet-tile-pane {
+      background: transparent !important;
+    }
     .continent-label {
       color: #496B8E;
       font-size: 13px;
@@ -245,12 +278,13 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
       transform: rotate(45deg);
       z-index: 1;
     }
-    body.is-home-preview #map {
+    body.is-home-preview #mapFallback {
       background: linear-gradient(180deg, #DDF1FC 0%, #BFDFEF 100%);
     }
     body.is-home-preview .leaflet-top.leaflet-left {
       right: 12px;
-      top: 74px;
+      top: auto;
+      bottom: 12px;
     }
     body.is-home-preview .leaflet-control-zoom {
       border-radius: 18px;
@@ -280,23 +314,71 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
   </style>
 </head>
 <body class="${isHomePreview ? 'is-home-preview' : ''}">
+  <div id="mapFallback">
+    <svg viewBox="0 0 360 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect x="0" y="0" width="360" height="180" fill="#D9EFF7" />
+      <g opacity="0.72">
+        <path d="M0 34H360M0 90H360M0 146H360" stroke="#FFFFFF" stroke-width="0.45" />
+        <path d="M60 0V180M180 0V180M300 0V180" stroke="#FFFFFF" stroke-width="0.45" />
+      </g>
+      <g opacity="0.88">
+        ${fallbackCountries}
+      </g>
+      <g opacity="0.96">
+        ${fallbackMarkers}
+      </g>
+    </svg>
+  </div>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
+    var worldBounds = L.latLngBounds([[-84.8, -180], [84.8, 180]]);
     var map = L.map('map', {
       zoomControl: true,
       attributionControl: true,
       scrollWheelZoom: ${isHomePreview ? 'false' : 'true'},
-      doubleClickZoom: true
-    }).setView([29, 78], 4);
+      doubleClickZoom: true,
+      preferCanvas: true,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
+      minZoom: ${isHomePreview ? 2.25 : 2.5},
+      maxBounds: worldBounds,
+      maxBoundsViscosity: 1,
+      worldCopyJump: false
+    }).setView([24, 18], ${isHomePreview ? 2.25 : 2.75});
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors &copy; <a href="https://carto.com">CARTO</a>',
       subdomains: 'abcd',
-      maxZoom: 20
+      maxZoom: 20,
+      noWrap: true,
+      bounds: worldBounds
     }).addTo(map);
 
     var markerLookup = {};
+    var selectedPlaceId = ${JSON.stringify(selectedPlaceId)};
+
+    function focusPoint(lat, lng, zoom) {
+      var desiredOffsetY = ${isHomePreview ? 18 : 54};
+      var point = map.project([lat, lng], zoom);
+      var center = map.unproject([point.x, point.y - desiredOffsetY], zoom);
+      map.setView(center, zoom, { animate: false });
+      map.panInsideBounds(worldBounds, { animate: false });
+    }
+
+    function fitAllPlaces(bounds) {
+      if (bounds.length === 1) {
+        focusPoint(bounds[0][0], bounds[0][1], ${selectedZoom});
+        return;
+      }
+      map.fitBounds(bounds, {
+        paddingTopLeft: [${fitPadding}, ${isHomePreview ? 54 : 96}],
+        paddingBottomRight: [${fitPadding}, ${fitPadding}],
+        maxZoom: ${isHomePreview ? 3.5 : 4.25},
+        animate: false
+      });
+      map.panInsideBounds(worldBounds, { animate: false });
+    }
 
     [
       { name: 'NORTH<br>AMERICA', lat: 48, lng: -103 },
@@ -322,19 +404,15 @@ export default function PlacesMap({ places, selectedPlaceId, onPlacePress, varia
     ${markersJs}
 
     ${selectedCoords ? `
-    map.setView([${selectedCoords.latitude}, ${selectedCoords.longitude}], ${isHomePreview ? 4 : 6});
-    if (markerLookup[${JSON.stringify(selectedPlaceId)}]) {
+    focusPoint(${selectedCoords.latitude}, ${selectedCoords.longitude}, ${selectedZoom});
+    if (markerLookup[selectedPlaceId]) {
       setTimeout(function() {
-        markerLookup[${JSON.stringify(selectedPlaceId)}].bringToFront();
+        markerLookup[selectedPlaceId].bringToFront();
       }, 120);
     }
     ` : mapped.length > 0 ? `
     var bounds = [${markerCoords.map(p => `[${p.latitude}, ${p.longitude}]`).join(',')}];
-    if (bounds.length === 1) {
-      map.setView(bounds[0], ${isHomePreview ? 4 : 3});
-    } else {
-      map.fitBounds(bounds, { padding: [${isHomePreview ? 34 : 76}, ${isHomePreview ? 34 : 76}], maxZoom: ${isHomePreview ? 4 : 5} });
-    }
+    fitAllPlaces(bounds);
     ` : ''}
   </script>
 </body>

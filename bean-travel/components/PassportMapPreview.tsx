@@ -8,9 +8,10 @@ import { VisitedPlace } from '@/types';
 interface Props {
   places: VisitedPlace[];
   selectedPlaceId?: string | null;
+  onPlacePress?: (place: VisitedPlace) => void;
 }
 
-export default function PassportMapPreview({ places, selectedPlaceId }: Props) {
+export default function PassportMapPreview({ places, selectedPlaceId, onPlacePress }: Props) {
   const countries = useMemo(
     () => Object.entries(COUNTRY_COORDS).map(([name, rings]) => ({ name, path: countryToPath(rings) })),
     [],
@@ -26,10 +27,20 @@ export default function PassportMapPreview({ places, selectedPlaceId }: Props) {
     .filter((place): place is VisitedPlace & { latitude: number; longitude: number } => Boolean(place))
     .slice(0, 36), [places]);
   const markerPositions = useMemo(() => projectMarkers(markers), [markers]);
+  const markerItems = useMemo(() => markers
+    .map((place, index) => ({
+      place,
+      active: place.id === selectedPlaceId,
+      position: markerPositions[index],
+    }))
+    .filter(item => Boolean(item.position))
+    .sort((a, b) => Number(a.active) - Number(b.active)), [markerPositions, markers, selectedPlaceId]);
+  const selectedMarker = markerItems.find(item => item.active);
+  const viewBox = selectedMarker ? focusViewBox(selectedMarker.position) : '0 0 360 180';
 
   return (
     <View style={styles.container}>
-      <Svg width="100%" height="100%" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet">
+      <Svg width="100%" height="100%" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
         <Rect x="0" y="0" width="360" height="180" fill="#D9EFF7" />
         <G opacity={0.72}>
           <Path d="M0 34H360M0 90H360M0 146H360" stroke="#FFFFFF" strokeWidth="0.45" />
@@ -46,13 +57,10 @@ export default function PassportMapPreview({ places, selectedPlaceId }: Props) {
             />
           ))}
         </G>
-        {markers
-          .map((place, index) => ({ place, index, active: place.id === selectedPlaceId, position: markerPositions[index] }))
-          .sort((a, b) => Number(a.active) - Number(b.active))
-          .map(({ place, active, position }) => {
+        {markerItems.map(({ place, active, position }) => {
           const { x, y } = position;
           return (
-            <G key={place.id} transform={`translate(${x} ${y})`}>
+            <G key={place.id} transform={`translate(${x} ${y})`} onPress={() => onPlacePress?.(place)}>
               {active && (
                 <>
                   <Circle cx="0" cy="-1" r="16" fill="#F26A2E" opacity={0.18} />
@@ -110,6 +118,14 @@ function hashString(value: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function focusViewBox(position: { x: number; y: number }) {
+  const width = 190;
+  const height = 118;
+  const x = clamp(position.x - width / 2, 0, 360 - width);
+  const y = clamp(position.y - height / 2 - 10, 0, 180 - height);
+  return `${x} ${y} ${width} ${height}`;
 }
 
 const styles = StyleSheet.create({

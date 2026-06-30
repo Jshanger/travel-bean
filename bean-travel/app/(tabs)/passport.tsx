@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlacesMap from '@/components/PlacesMap';
@@ -13,7 +13,6 @@ import { allBeans, beanTitle, formatDate, primaryPhoto } from '@/utils/travelBea
 const INK = '#25283D';
 const MUTED = '#8A8FA1';
 const ORANGE = '#F26A2E';
-const BLUE = '#AFC8FF';
 const CARD = '#F8FAFF';
 const BORDER = '#E0E7F6';
 
@@ -22,6 +21,7 @@ export default function PassportScreen() {
   const params = useLocalSearchParams<{ id?: string; placeId?: string }>();
   const insets = useSafeAreaInsets();
   const { places } = useApp();
+  const scrollRef = useRef<ScrollView>(null);
   const beans = useMemo(() => allBeans(places).map(enrichPlaceCoords), [places]);
   const mappedBeans = useMemo(() => beans.filter(hasCoords), [beans]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -45,6 +45,15 @@ export default function PassportScreen() {
     } as any);
   }
 
+  function selectPlace(place: VisitedPlace, revealMap = true) {
+    setSelectedId(place.id);
+    if (revealMap) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      });
+    }
+  }
+
   useEffect(() => {
     const requestedId = routeParam(params.id) ?? routeParam(params.placeId);
     if (requestedId && mappedBeans.some(place => place.id === requestedId)) {
@@ -55,12 +64,12 @@ export default function PassportScreen() {
   }, [mappedBeans, params.id, params.placeId, selectedId]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollRef} style={styles.screen} contentContainerStyle={{ paddingTop: top, paddingBottom: bottom }} showsVerticalScrollIndicator={false}>
       <View style={styles.mapHero}>
         <PlacesMap
           places={mappedBeans}
           selectedPlaceId={selected?.id ?? null}
-          onPlacePress={place => setSelectedId(place.id)}
+          onPlacePress={place => selectPlace(place, false)}
         />
         <View pointerEvents="none" style={styles.mapBlueWash} />
         <View style={styles.mapHeader}>
@@ -102,7 +111,7 @@ export default function PassportScreen() {
                 </View>
                 <View style={styles.livePill}>
                   <Feather name="map-pin" size={12} color={ORANGE} />
-                  <Text style={styles.livePillText}>On map</Text>
+                  <Text style={styles.livePillText}>Focused</Text>
                 </View>
               </View>
               <Text style={styles.featuredStory} numberOfLines={2}>{beanTitle(selected)}</Text>
@@ -144,7 +153,7 @@ export default function PassportScreen() {
                 key={place.id}
                 style={[styles.placeRow, active && styles.placeRowActive]}
               >
-                <TouchableOpacity style={styles.placeRowSelect} onPress={() => setSelectedId(place.id)} activeOpacity={0.84}>
+                <TouchableOpacity style={styles.placeRowSelect} onPress={() => selectPlace(place)} activeOpacity={0.84}>
                   <Image source={{ uri: primaryPhoto(place) }} style={styles.rowImage} contentFit="cover" />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowTitle} numberOfLines={1}>{place.name}</Text>
@@ -187,12 +196,12 @@ function routeParam(value?: string | string[]) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F5F7FF' },
-  mapHero: { height: 430, overflow: 'hidden', backgroundColor: BLUE },
-  mapBlueWash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(128,160,238,0.22)' },
-  mapHeader: { position: 'absolute', top: 56, left: 24, right: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  passportBadge: { minHeight: 58, borderRadius: 29, paddingHorizontal: 22, backgroundColor: '#163D47', flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: '#111827', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.14, shadowRadius: 22, elevation: 8 },
-  passportBadgeText: { color: '#fff', fontSize: 20, fontFamily: 'Inter_700Bold' },
-  homeMapButton: { width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', shadowColor: '#111827', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 7 },
+  mapHero: { height: 430, overflow: 'hidden', backgroundColor: '#D9E7F2' },
+  mapBlueWash: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(128,160,238,0.03)' },
+  mapHeader: { position: 'absolute', top: 24, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  passportBadge: { minHeight: 46, borderRadius: 23, paddingHorizontal: 16, backgroundColor: '#163D47', flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#111827', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 6 },
+  passportBadgeText: { color: '#fff', fontSize: 17, fontFamily: 'Inter_700Bold' },
+  homeMapButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', shadowColor: '#111827', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 5 },
   sheet: { marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: CARD, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 28, borderTopWidth: 1, borderColor: BORDER },
   handle: { width: 72, height: 8, borderRadius: 4, backgroundColor: '#DCE5ED', alignSelf: 'center', marginBottom: 24 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },

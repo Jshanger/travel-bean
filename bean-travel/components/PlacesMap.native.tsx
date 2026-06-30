@@ -11,7 +11,7 @@ interface Props {
   variant?: 'full' | 'home';
 }
 
-export default function PlacesMap({ places, selectedPlaceId }: Props) {
+export default function PlacesMap({ places, selectedPlaceId, onPlacePress }: Props) {
   const mapped = places.filter(place => {
     if (typeof place.latitude === 'number' && typeof place.longitude === 'number') return true;
     return Boolean(
@@ -23,7 +23,7 @@ export default function PlacesMap({ places, selectedPlaceId }: Props) {
 
   return (
     <View style={styles.container}>
-      <PassportMapPreview places={mapped} selectedPlaceId={selectedPlaceId} />
+      <PassportMapPreview places={mapped} selectedPlaceId={selectedPlaceId} onPlacePress={onPlacePress} />
       <View pointerEvents="none" style={styles.badge}>
         <Text style={styles.badgeTitle}>Passport Map</Text>
         <Text style={styles.badgeMeta}>
