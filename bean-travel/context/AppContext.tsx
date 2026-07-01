@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { lookupCoords } from '@/constants/cityCoords';
 import { useSubscription } from '@/services/revenuecat';
 import { BeanPhoto, BlogPost, BucketItem, BucketStatus, BucketTag, TravelBlogSettings, Trip, ItineraryItem, TripComment, VisitedPlace } from '@/types';
@@ -141,6 +143,63 @@ async function readPhotoBlob(uri: string) {
     xhr.onerror = () => reject(new Error('Could not read the selected photo'));
     xhr.send();
   });
+}
+
+function shouldUploadForPublicBlog(uri: string | undefined) {
+  if (!uri) return false;
+  if (/^https?:\/\//i.test(uri)) return false;
+  if (/^\/api\/blog\/public\/images\//i.test(uri)) return false;
+  if (/^\/api\/bean\/photos\/img\//i.test(uri)) return false;
+  return true;
+}
+
+async function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read photo data'));
+    reader.onerror = () => reject(new Error('Could not read photo data'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function photoDataUrl(uri: string) {
+  const contentType = photoContentType(uri);
+  if (/^data:image\//i.test(uri)) return uri;
+  if (Platform.OS !== 'web' && /^file:\/\//i.test(uri)) {
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+    return `data:${contentType};base64,${base64}`;
+  }
+  const blob = await readPhotoBlob(uri);
+  return blobToDataUrl(blob);
+}
+
+async function prepareBlogPostsForPublicSync(posts: BlogPost[]) {
+  const prepared: BlogPost[] = [];
+  for (const post of posts) {
+    const photos = [];
+    for (const photo of post.photos.slice(0, 8)) {
+      if (shouldUploadForPublicBlog(photo.imageUrl)) {
+        try {
+          photos.push({
+            ...photo,
+            imageData: await photoDataUrl(photo.imageUrl),
+          } as typeof photo & { imageData?: string });
+        } catch (error) {
+          console.warn('Could not prepare blog photo for upload', error);
+          throw new Error('Could not prepare one of the blog photos for public upload. Please re-add the photo and publish again.');
+        }
+      } else {
+        photos.push(photo);
+      }
+    }
+    const coverPhoto = photos.find(photo => photo.id === post.coverPhotoId);
+    prepared.push({
+      ...post,
+      photos,
+      coverImageUrl: coverPhoto?.imageUrl ?? post.coverImageUrl,
+    } as BlogPost);
+  }
+  return prepared;
 }
 
 async function uploadPlacePhoto(placeId: string, photo: BeanPhoto, token: string | null) {
@@ -286,11 +345,12 @@ function parseStoredBlogPosts(value: string | null): BlogPost[] {
 }
 
 async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: BlogPost[]): Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }> {
+  const syncPosts = await prepareBlogPostsForPublicSync(posts);
   const response = await blogApiFetch('/public-sync', null, {
     method: 'POST',
     body: JSON.stringify({
       settings: { ...settings, privacy: 'public' },
-      posts,
+      posts: syncPosts,
     }),
   });
   const savedSettings = mapBlogSettings(response.settings);

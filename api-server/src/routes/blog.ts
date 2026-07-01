@@ -1,10 +1,21 @@
 import { Router } from "express";
 import { db, blogPosts, placePhotos, travelBlogSettings, userSubscriptions } from "@workspace/db";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { loadObject } from "../utils/storage";
+import { loadObject, saveObject } from "../utils/storage";
 
 const router = Router();
+const MAX_PUBLIC_SYNC_IMAGE_BYTES = 15 * 1024 * 1024;
+const ACCOUNT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
+
+class PublicSyncUploadError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function uid() {
   return Date.now().toString() + Math.random().toString(36).slice(2, 11);
@@ -130,6 +141,110 @@ function postValues(userId: string, body: any, existing?: typeof blogPosts.$infe
 function publicImagePath(photoId: string, password?: string) {
   const query = password ? `?password=${encodeURIComponent(password)}` : "";
   return `/api/blog/public/images/${encodeURIComponent(photoId)}${query}`;
+}
+
+function safeObjectSegment(value: string) {
+  return value
+    .replace(/[^a-z0-9_-]/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "item";
+}
+
+function extForContentType(contentType: string) {
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  return "jpg";
+}
+
+function decodeDataImage(value: unknown) {
+  if (typeof value !== "string") return null;
+  const match = value.match(/^data:(image\/(?:jpe?g|png|webp));base64,([a-z0-9+/=\s]+)$/i);
+  if (!match) return null;
+  const contentType = match[1].toLowerCase() === "image/jpg" ? "image/jpeg" : match[1].toLowerCase();
+  const buffer = Buffer.from(match[2].replace(/\s/g, ""), "base64");
+  if (!buffer.length) return null;
+  return { buffer, contentType };
+}
+
+function stripPhotoUploadData(photo: any) {
+  const { imageData, uploadData, localImageData, ...clean } = photo ?? {};
+  return clean;
+}
+
+async function storedPhotoBytesForUser(userId: string) {
+  const [usage] = await db
+    .select({ bytes: sql<number>`coalesce(sum(${placePhotos.byteSize}), 0)` })
+    .from(placePhotos)
+    .where(eq(placePhotos.userId, userId));
+  return Number(usage?.bytes ?? 0);
+}
+
+async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo: any) {
+  const upload = decodeDataImage(photo?.imageData ?? photo?.uploadData ?? photo?.localImageData);
+  if (!upload || !photo?.id) return stripPhotoUploadData(photo);
+
+  if (upload.buffer.length > MAX_PUBLIC_SYNC_IMAGE_BYTES) {
+    throw new PublicSyncUploadError(413, "One of the blog photos is too large. Please choose a smaller image and publish again.");
+  }
+
+  const photoId = String(photo.id);
+  const [existing] = await db.select().from(placePhotos).where(and(
+    eq(placePhotos.id, photoId),
+    eq(placePhotos.userId, userId),
+  ));
+  const currentStorageBytes = await storedPhotoBytesForUser(userId);
+  const replacingBytes = Number(existing?.byteSize ?? 0);
+  if (currentStorageBytes - replacingBytes + upload.buffer.length > ACCOUNT_STORAGE_LIMIT_BYTES) {
+    throw new PublicSyncUploadError(413, "Photo storage limit reached. You have used your 5GB optimized photo storage.");
+  }
+
+  const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
+  await saveObject(objectPath, upload.buffer, upload.contentType);
+
+  const values = {
+    id: photoId,
+    userId,
+    placeId: sourcePlaceId || "blog-post",
+    objectPath,
+    byteSize: upload.buffer.length,
+    caption: typeof photo.caption === "string" ? photo.caption : "",
+  };
+  if (existing) {
+    await db.update(placePhotos)
+      .set({
+        userId,
+        placeId: values.placeId,
+        objectPath,
+        byteSize: values.byteSize,
+        caption: values.caption,
+      })
+      .where(eq(placePhotos.id, photoId));
+  } else {
+    await db.insert(placePhotos).values(values);
+  }
+
+  return {
+    ...stripPhotoUploadData(photo),
+    imageUrl: publicImagePath(photoId),
+  };
+}
+
+async function normalizePublicSyncPostPhotos(userId: string, post: any) {
+  const sourcePlaceId = String(post.sourcePlaceId ?? post.source_place_id ?? post.id ?? "");
+  const rawPhotos = Array.isArray(post.photos) ? post.photos.slice(0, 8) : [];
+  const photos = [];
+  for (const photo of rawPhotos) {
+    photos.push(await savePublicSyncPhoto(userId, sourcePlaceId, photo));
+  }
+  const coverPhotoId = post.coverPhotoId ?? post.cover_photo_id ?? photos[0]?.id;
+  const coverPhoto = photos.find((photo: any) => photo?.id === coverPhotoId);
+  return {
+    ...post,
+    coverPhotoId,
+    coverImageUrl: coverPhoto?.imageUrl ?? post.coverImageUrl ?? post.cover_image_url,
+    photos,
+  };
 }
 
 function canUseStoredImageUrl(value: unknown) {
@@ -359,34 +474,42 @@ router.post("/public-sync", async (req, res) => {
   }
 
   const savedPosts: Array<typeof blogPosts.$inferSelect> = [];
-  for (const post of incomingPosts) {
-    const [existing] = await db.select().from(blogPosts).where(and(
-      eq(blogPosts.id, String(post.id)),
-      eq(blogPosts.userId, userId),
-    ));
-    const isPublished = post.status === "published" && (post.privacy !== "password" || Boolean(String(post.password ?? "").trim()));
-    const values = {
-      ...postValues(userId, {
-        ...post,
-        status: isPublished ? "published" : "draft",
-        privacy: isPublished ? (post.privacy === "password" ? "password" : "public") : "private",
-        publishedAt: isPublished ? post.publishedAt ?? now.toISOString() : null,
-      }, existing),
-      publishedAt: isPublished ? (post.publishedAt ? new Date(post.publishedAt) : existing?.publishedAt ?? now) : null,
-    };
-    if (existing) {
-      const [row] = await db.update(blogPosts)
-        .set(values)
-        .where(and(eq(blogPosts.id, String(post.id)), eq(blogPosts.userId, userId)))
-        .returning();
-      if (row) savedPosts.push(row);
-    } else {
-      const [row] = await db.insert(blogPosts).values({
-        id: String(post.id),
-        ...values,
-      }).returning();
-      if (row) savedPosts.push(row);
+  try {
+    for (const incomingPost of incomingPosts) {
+      const post = await normalizePublicSyncPostPhotos(userId, incomingPost);
+      const [existing] = await db.select().from(blogPosts).where(and(
+        eq(blogPosts.id, String(post.id)),
+        eq(blogPosts.userId, userId),
+      ));
+      const isPublished = post.status === "published" && (post.privacy !== "password" || Boolean(String(post.password ?? "").trim()));
+      const values = {
+        ...postValues(userId, {
+          ...post,
+          status: isPublished ? "published" : "draft",
+          privacy: isPublished ? (post.privacy === "password" ? "password" : "public") : "private",
+          publishedAt: isPublished ? post.publishedAt ?? now.toISOString() : null,
+        }, existing),
+        publishedAt: isPublished ? (post.publishedAt ? new Date(post.publishedAt) : existing?.publishedAt ?? now) : null,
+      };
+      if (existing) {
+        const [row] = await db.update(blogPosts)
+          .set(values)
+          .where(and(eq(blogPosts.id, String(post.id)), eq(blogPosts.userId, userId)))
+          .returning();
+        if (row) savedPosts.push(row);
+      } else {
+        const [row] = await db.insert(blogPosts).values({
+          id: String(post.id),
+          ...values,
+        }).returning();
+        if (row) savedPosts.push(row);
+      }
     }
+  } catch (err: any) {
+    req.log.error({ err }, "public blog sync failed");
+    const status = err instanceof PublicSyncUploadError ? err.status : 500;
+    res.status(status).json({ error: err?.message ?? "Could not sync public blog" });
+    return;
   }
 
   res.json({
