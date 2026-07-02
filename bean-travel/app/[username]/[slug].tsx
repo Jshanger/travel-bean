@@ -29,6 +29,7 @@ export default function PublicBlogPost() {
   const activeSettings = remotePost?.settings;
   const passwordRequired = Boolean(post && 'passwordRequired' in post && post.passwordRequired);
   const unlocked = post?.privacy !== 'password' || !passwordRequired;
+  const articleBody = post ? readableBlogBody(post) : '';
 
   async function sharePost() {
     if (!activeSettings || !post) return;
@@ -104,6 +105,10 @@ export default function PublicBlogPost() {
           <Text style={styles.brand}>Travel Bean Blog</Text>
         </TouchableOpacity>
         <View style={styles.navActions}>
+          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/blog' as any)} activeOpacity={0.86}>
+            <Feather name="arrow-left" size={14} color={ORANGE} />
+            <Text style={styles.navButtonText}>Back to app</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navButton} onPress={shareBlog} activeOpacity={0.86}>
             <Feather name="globe" size={14} color={ORANGE} />
             <Text style={styles.navButtonText}>Share Blog</Text>
@@ -118,9 +123,6 @@ export default function PublicBlogPost() {
       {post.coverImageUrl ? <Image source={{ uri: post.coverImageUrl }} style={styles.cover} contentFit="cover" contentPosition="top center" /> : null}
       <View style={styles.article}>
         <Text style={styles.kicker}>{post.category} · {formatPublicUsername(activeSettings.username)}</Text>
-        <Text style={styles.title}>{post.title}</Text>
-        <Text style={styles.subtitle}>{post.subtitle}</Text>
-        <Text style={styles.publicUrl}>{publicBlogUrl(activeSettings, post)}</Text>
         <View style={styles.metaRow}>
           <Feather name="map-pin" size={14} color={ORANGE} />
           <Text style={styles.metaText}>{post.hideExactLocation ? post.country : `${post.place}, ${post.country}`}</Text>
@@ -131,6 +133,8 @@ export default function PublicBlogPost() {
             </>
           ) : null}
         </View>
+        <Text style={styles.title}>{post.title}</Text>
+        <Text style={styles.subtitle}>{post.subtitle}</Text>
 
         {post.privacy === 'password' && !unlocked ? (
           <View style={styles.passwordCard}>
@@ -168,7 +172,7 @@ export default function PublicBlogPost() {
           </View>
         ) : (
           <>
-            <Text style={styles.body}>{post.body}</Text>
+            {articleBody ? <Text style={styles.body}>{articleBody}</Text> : null}
             {post.photos.filter(photo => photo.included).length ? (
               <View style={styles.gallery}>
                 {post.photos.filter(photo => photo.included).map(photo => (
@@ -207,10 +211,9 @@ const styles = StyleSheet.create({
   cover: { width: '100%', aspectRatio: Platform.OS === 'web' ? 2.1 : 1.28, borderRadius: 24, backgroundColor: '#EAD2C2', marginBottom: 18 },
   article: { borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: Platform.OS === 'web' ? 28 : 18 },
   kicker: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold', marginBottom: 8 },
-  title: { color: INK, fontSize: Platform.OS === 'web' ? 46 : 34, lineHeight: Platform.OS === 'web' ? 54 : 40, fontFamily: 'Inter_700Bold' },
+  title: { color: INK, fontSize: Platform.OS === 'web' ? 46 : 34, lineHeight: Platform.OS === 'web' ? 54 : 40, fontFamily: 'Inter_700Bold', marginTop: 16 },
   subtitle: { color: MUTED, fontSize: 18, lineHeight: 27, fontFamily: 'Inter_500Medium', marginTop: 10 },
-  publicUrl: { color: ORANGE, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 12 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 16, paddingBottom: 18, borderBottomWidth: 1, borderBottomColor: BORDER },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 12, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: BORDER },
   metaText: { color: MUTED, fontSize: 13, fontFamily: 'Inter_700Bold', marginRight: 7 },
   body: { color: INK, fontSize: 18, lineHeight: 31, fontFamily: 'Inter_500Medium', marginTop: 22 },
   gallery: { marginTop: 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -233,4 +236,47 @@ function apiRoot() {
   if (domain) return `https://${domain}/api`;
   if (typeof window !== 'undefined' && window.location?.origin) return `${window.location.origin}/api`;
   return '/api';
+}
+
+function readableBlogBody(post: BlogPost) {
+  const body = post.body.trim();
+  if (!body) return '';
+  const cleanedPromptBody = removePromptHeadings(body);
+  if (cleanedPromptBody !== body) {
+    const opening = post.opening.trim();
+    if (opening && opening !== post.subtitle.trim()) return opening;
+    return '';
+  }
+  return body;
+}
+
+function removePromptHeadings(body: string) {
+  const promptStarters = [
+    'what made',
+    'what is one moment',
+    'how did this trip',
+    'what tiny detail',
+    'what did this place',
+    'who were you with',
+    'what surprised',
+    'what would you tell',
+    'what did you find',
+    'what felt different',
+    'what color',
+    'what made you smile',
+    'what did you eat',
+    'what was the best',
+    'what would make',
+  ];
+  const blocks = body.split(/\n{2,}/).map(block => block.trim()).filter(Boolean);
+  let changed = false;
+  const cleaned = blocks.map(block => {
+    const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+    if (lines.length < 2) return block;
+    const first = lines[0].toLowerCase().replace(/[?!.]+$/, '');
+    if (!promptStarters.some(starter => first.startsWith(starter))) return block;
+    changed = true;
+    return lines.slice(1).join(' ');
+  });
+  return changed ? cleaned.join('\n\n').trim() : body;
 }

@@ -8,10 +8,11 @@ import {
 
 import AuthBrandHero from '@/components/AuthBrandHero';
 import { useColors } from '@/hooks/useColors';
+import { hasClerkPublishableKey } from '@/utils/clerkConfig';
 
 type Screen = 'form' | 'otp';
 
-const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+const clerkConfigured = hasClerkPublishableKey();
 
 export default function WebSignInScreen() {
   if (!clerkConfigured) {
@@ -31,9 +32,9 @@ function AuthSetupMissing() {
         <AuthBrandHero variant="signin" />
       </View>
       <View style={styles.inner}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Web sign-in needs setup</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Web sign-in is not available right now</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Travel Bean still works in the app. Add the Clerk publishable key in Railway to enable laptop sign-in.
+          Travel Bean still works in the app. Please try the laptop dashboard again in a moment.
         </Text>
         <TouchableOpacity
           style={[styles.primaryBtn, { backgroundColor: colors.primary }]}

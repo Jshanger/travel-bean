@@ -1,6 +1,7 @@
 import { useAuth, useClerk, useUser } from "@clerk/clerk-react";
+import { hasClerkPublishableKey } from "@/utils/clerkConfig";
 
-const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+const clerkConfigured = hasClerkPublishableKey();
 
 const fallbackAuth = {
   isLoaded: true,

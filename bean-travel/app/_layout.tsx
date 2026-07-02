@@ -18,13 +18,14 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TravelClerkProvider } from "@/components/TravelClerkProvider";
 import { AppProvider } from "@/context/AppContext";
 import { SubscriptionProvider } from "@/services/revenuecat";
+import { getClerkProxyUrl, getClerkPublishableKey } from "@/utils/clerkConfig";
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const queryClient = new QueryClient();
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
-const configuredProxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+const publishableKey = getClerkPublishableKey();
+const configuredProxyUrl = getClerkProxyUrl();
 const proxyUrl = Platform.OS === "web" ? undefined : configuredProxyUrl;
 
 function RootLayoutNav() {

@@ -1,8 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PremiumModal from '@/components/PremiumModal';
 import SocialShareSheet, { type SocialSharePayload } from '@/components/SocialShareSheet';
@@ -28,8 +28,7 @@ export default function BlogEditorScreen() {
   const [saveNotice, setSaveNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
-  const link = useMemo(() => draft ? publicBlogUrl(blogSettings, draft) : '', [blogSettings, draft]);
-  const blogLink = useMemo(() => publicBlogUrl(blogSettings), [blogSettings]);
+  const editorBottomPadding = Platform.OS === 'web' ? 260 : Math.max(insets.bottom + 260, 300);
 
   useEffect(() => {
     setDraft(post);
@@ -180,6 +179,10 @@ export default function BlogEditorScreen() {
     });
   }
 
+  function dismissKeyboard() {
+    Keyboard.dismiss();
+  }
+
   function refreshFromJournal() {
     if (!draft) return;
     const source = places.find(place => place.id === draft.sourcePlaceId);
@@ -208,7 +211,14 @@ export default function BlogEditorScreen() {
 
   return (
     <>
-      <ScrollView style={styles.screen} contentContainerStyle={{ paddingTop: (Platform.OS === 'web' ? 42 : insets.top + 18), paddingBottom: 64 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingTop: (Platform.OS === 'web' ? 42 : insets.top + 18), paddingBottom: editorBottomPadding }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        automaticallyAdjustKeyboardInsets={Platform.OS !== 'web'}
+      >
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.86}>
             <Feather name="chevron-left" size={23} color={INK} />
@@ -283,20 +293,6 @@ export default function BlogEditorScreen() {
           ))}
         </View>
 
-        <View style={styles.sharePreview}>
-          <Text style={styles.previewKicker}>Share preview</Text>
-          <Text style={styles.previewTitle}>{draft.title}</Text>
-          <Text style={styles.previewText}>{draft.subtitle}</Text>
-          {draft.privacy === 'password' ? (
-            <View style={styles.previewProtected}>
-              <Feather name="lock" size={13} color="#153A46" />
-              <Text style={styles.previewProtectedText}>Password protected. Readers will see a lock screen before the story opens.</Text>
-            </View>
-          ) : null}
-          <Text style={styles.previewUrl}>{link || 'Set a username to create your link'}</Text>
-          {blogLink ? <Text style={styles.previewBlogUrl}>Whole blog: {blogLink}</Text> : null}
-        </View>
-
         <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving} activeOpacity={0.88}>
           <Feather name="save" size={17} color="#fff" />
           <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save Draft'}</Text>
@@ -334,6 +330,28 @@ export default function BlogEditorScreen() {
         )}
         </View>
       </ScrollView>
+      <View style={[styles.stickyActions, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        <TouchableOpacity style={styles.stickyQuietButton} onPress={dismissKeyboard} activeOpacity={0.86}>
+          <Feather name="chevron-down" size={16} color={MUTED} />
+          <Text style={styles.stickyQuietText}>Done</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.stickySaveButton, saving && styles.stickyButtonDisabled]} onPress={save} disabled={saving} activeOpacity={0.88}>
+          <Feather name="save" size={15} color="#fff" />
+          <Text style={styles.stickyButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+        </TouchableOpacity>
+        {draft.status === 'published' ? (
+          <TouchableOpacity style={styles.stickyPublishButton} onPress={openPublicLink} activeOpacity={0.88}>
+            <Feather name="external-link" size={15} color="#fff" />
+            <Text style={styles.stickyButtonText}>View</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.stickyPublishButton} onPress={publish} activeOpacity={0.88}>
+            <Feather name="globe" size={15} color="#fff" />
+            <Text style={styles.stickyButtonText}>Publish</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      </KeyboardAvoidingView>
       <PremiumModal visible={premiumVisible} mode="general" onClose={() => setPremiumVisible(false)} />
       <SocialShareSheet visible={Boolean(sharePayload)} payload={sharePayload} onClose={() => setSharePayload(null)} />
     </>
@@ -342,6 +360,7 @@ export default function BlogEditorScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: PAPER },
+  scroll: { flex: 1, backgroundColor: PAPER },
   centered: { alignItems: 'center', justifyContent: 'center', padding: 24 },
   missingTitle: { color: INK, fontSize: 22, fontFamily: 'Inter_700Bold', marginBottom: 14 },
   header: { maxWidth: 860, width: '100%', alignSelf: 'center', paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
@@ -372,14 +391,6 @@ const styles = StyleSheet.create({
   smallPillText: { color: MUTED, fontSize: 10, fontFamily: 'Inter_700Bold' },
   smallPillTextActive: { color: ORANGE },
   iconMini: { width: 32, height: 30, borderRadius: 15, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center', backgroundColor: PAPER },
-  sharePreview: { marginTop: 18, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: '#FFF8EF', padding: 14 },
-  previewKicker: { color: ORANGE, fontSize: 11, fontFamily: 'Inter_700Bold', marginBottom: 6 },
-  previewTitle: { color: INK, fontSize: 22, lineHeight: 27, fontFamily: 'Inter_700Bold' },
-  previewText: { color: MUTED, fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium', marginTop: 4 },
-  previewProtected: { marginTop: 10, alignSelf: 'flex-start', borderRadius: 15, backgroundColor: '#EAF8F3', paddingHorizontal: 10, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  previewProtectedText: { color: '#153A46', fontSize: 11, lineHeight: 16, fontFamily: 'Inter_700Bold' },
-  previewUrl: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold', marginTop: 10 },
-  previewBlogUrl: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_700Bold', marginTop: 6 },
   saveButton: { marginTop: 18, minHeight: 52, borderRadius: 26, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   saveText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
   saveNotice: { marginTop: 10, minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: '#9BDCCB', backgroundColor: '#EAF8F3', paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -391,4 +402,56 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 10, marginTop: 10 },
   secondaryButton: { flex: 1, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 14 },
   secondaryButtonText: { color: ORANGE, fontSize: 13, fontFamily: 'Inter_700Bold' },
+  stickyActions: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 70,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    backgroundColor: '#FFF8EFEE',
+    paddingTop: 10,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 9,
+  },
+  stickyQuietButton: {
+    minHeight: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  stickyQuietText: { color: MUTED, fontSize: 13, fontFamily: 'Inter_700Bold' },
+  stickySaveButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 22,
+    backgroundColor: ORANGE,
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  stickyPublishButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 22,
+    backgroundColor: '#153A46',
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  stickyButtonDisabled: { opacity: 0.65 },
+  stickyButtonText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
 });

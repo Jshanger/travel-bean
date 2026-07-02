@@ -1,5 +1,5 @@
 import type { BlogPost, BlogPostPhoto, BlogPrivacy, TravelBlogSettings, VisitedPlace } from '../types';
-import { beanTitle, formatDate, journalMemoryText, memoryResponses, primaryPhoto } from './travelBeanMvp';
+import { beanTitle, formatDate, journalMemoryText, primaryPhoto } from './travelBeanMvp';
 
 const DEFAULT_BLOG_TITLE = 'My Travel Bean Blog';
 
@@ -68,16 +68,15 @@ export function generateBlogDraftFromBean(bean: VisitedPlace, existingPosts: Blo
   const title = beanTitle(bean);
   const story = journalMemoryText(bean);
   const longEntry = extractLongEntry(bean.notes);
-  const promptText = promptParagraphs(bean);
   const photos = blogPhotos(bean);
   const cover = photos[0];
-  const subtitle = story || `${formatDate(bean.dateVisited)} in ${bean.name}`;
+  const subtitle = longEntry && story ? story : `${formatDate(bean.dateVisited)} in ${bean.name}`;
   const opening = longEntry || story || `On ${formatDate(bean.dateVisited)}, I saved this memory from ${bean.name}, ${bean.country}.`;
-  const fallbackDetail = story || longEntry || promptText
+  const fallbackDetail = story || longEntry
     ? ''
     : `This is the place to add the parts the photos cannot quite hold yet: who was nearby, what was happening around me, what I noticed first, and the small details I want to remember later.`;
   const bodyParts = [
-    longEntry || promptText || story || opening,
+    longEntry || story || opening,
     fallbackDetail,
   ].filter(Boolean);
 
@@ -143,21 +142,6 @@ function extractLongEntry(notes: string) {
     ?.split('\n\nMood:')[0]
     ?.split('\n\nLayout:')[0]
     ?.trim() ?? '';
-}
-
-function promptParagraphs(bean: VisitedPlace) {
-  if (bean.promptResponses?.length) {
-    const sections = bean.promptResponses
-      .filter(item => item.response.trim())
-      .map(item => `${cleanPrompt(item.prompt)}\n${item.response.trim()}`)
-      .join('\n\n');
-    if (sections) return sections;
-  }
-  return memoryResponses(bean).slice(0, 4).join('\n\n');
-}
-
-function cleanPrompt(prompt: string) {
-  return prompt.trim().replace(/[?!.]+$/, '');
 }
 
 function buildTags(bean: VisitedPlace) {

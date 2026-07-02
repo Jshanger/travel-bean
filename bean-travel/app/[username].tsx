@@ -95,6 +95,10 @@ export default function PublicBlogHome() {
           <Text style={styles.brand}>Travel Bean Blog</Text>
         </View>
         <View style={styles.navActions}>
+          <TouchableOpacity style={styles.navButton} onPress={() => router.push('/blog' as any)} activeOpacity={0.86}>
+            <Feather name="arrow-left" size={14} color={ORANGE} />
+            <Text style={styles.navButtonText}>Back to app</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.navButtonPrimary} onPress={shareBlog} activeOpacity={0.86}>
             <Feather name="share-2" size={14} color="#fff" />
             <Text style={styles.navButtonPrimaryText}>Share Blog</Text>

@@ -8,8 +8,11 @@ import {
 
 import AuthBrandHero from '@/components/AuthBrandHero';
 import { useColors } from '@/hooks/useColors';
+import { hasClerkPublishableKey } from '@/utils/clerkConfig';
 
-const clerkConfigured = Boolean(process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY);
+type Screen = 'form' | 'verify';
+
+const clerkConfigured = hasClerkPublishableKey();
 
 export default function WebSignUpScreen() {
   if (!clerkConfigured) {
@@ -29,9 +32,9 @@ function AuthSetupMissing() {
         <AuthBrandHero variant="signup" />
       </View>
       <View style={styles.inner}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Web sign-up needs setup</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Web sign-up is not available right now</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Travel Bean still works in the app. Add the Clerk publishable key in Railway to enable laptop account creation.
+          Travel Bean still works in the app. Please try creating your laptop dashboard account again in a moment.
         </Text>
         <TouchableOpacity
           style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
@@ -50,6 +53,7 @@ function WebSignUpInner() {
   const router = useRouter();
   const { signUp, setActive, isLoaded } = useSignUp();
 
+  const [screen, setScreen] = useState<Screen>('form');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -74,6 +78,7 @@ function WebSignUpInner() {
     try {
       await signUp.create({ emailAddress: email, password });
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      setScreen('verify');
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.errors?.[0]?.message ?? err?.message ?? 'Sign up failed. Please try again.';
       setErrorMsg(msg);
@@ -97,7 +102,7 @@ function WebSignUpInner() {
       const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)');
+        router.replace('/blog' as any);
       }
     } catch (err: any) {
       const msg = err?.errors?.[0]?.longMessage ?? err?.errors?.[0]?.message ?? 'Verification failed.';
@@ -109,11 +114,7 @@ function WebSignUpInner() {
 
   const topPt = Platform.OS === 'web' ? 67 : 0;
 
-  if (
-    signUp?.status === 'missing_requirements' &&
-    signUp?.unverifiedFields?.includes('email_address') &&
-    signUp?.missingFields?.length === 0
-  ) {
+  if (screen === 'verify') {
     return (
       <ScrollView style={[styles.root, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={{ paddingTop: topPt }}>
@@ -139,7 +140,15 @@ function WebSignUpInner() {
           >
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnTxt}>Verify email</Text>}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => signUp.prepareEmailAddressVerification({ strategy: 'email_code' })}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!isLoaded || !signUp) {
+                setErrorMsg('Sign up is still loading. Please try again in a moment.');
+                return;
+              }
+              void signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+            }}
+          >
             <Text style={[styles.link, { color: colors.primary, textAlign: 'center' }]}>Resend code</Text>
           </TouchableOpacity>
         </View>
