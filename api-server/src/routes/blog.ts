@@ -143,6 +143,14 @@ function publicImagePath(photoId: string, password?: string) {
   return `/api/blog/public/images/${encodeURIComponent(photoId)}${query}`;
 }
 
+function requestPhotoId(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function safeObjectSegment(value: string) {
   return value
     .replace(/[^a-z0-9_-]/gi, "-")
@@ -181,18 +189,25 @@ async function storedPhotoBytesForUser(userId: string) {
 }
 
 async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo: any) {
-  const upload = decodeDataImage(photo?.imageData ?? photo?.uploadData ?? photo?.localImageData);
-  if (!upload || !photo?.id) return stripPhotoUploadData(photo);
-
-  if (upload.buffer.length > MAX_PUBLIC_SYNC_IMAGE_BYTES) {
-    throw new PublicSyncUploadError(413, "One of the blog photos is too large. Please choose a smaller image and publish again.");
-  }
+  const upload = decodeDataImage(photo?.imageData ?? photo?.uploadData ?? photo?.localImageData ?? photo?.imageUrl);
+  const cleanPhoto = stripPhotoUploadData(photo);
+  if (!photo?.id) return cleanPhoto;
 
   const photoId = String(photo.id);
   const [existing] = await db.select().from(placePhotos).where(and(
     eq(placePhotos.id, photoId),
     eq(placePhotos.userId, userId),
   ));
+  if (!upload) {
+    if (existing) return { ...cleanPhoto, imageUrl: publicImagePath(photoId) };
+    if (typeof cleanPhoto.imageUrl === "string" && /^https?:\/\//i.test(cleanPhoto.imageUrl)) return cleanPhoto;
+    throw new PublicSyncUploadError(400, "Could not publish one of the blog photos. Please re-add the photo and publish again.");
+  }
+
+  if (upload.buffer.length > MAX_PUBLIC_SYNC_IMAGE_BYTES) {
+    throw new PublicSyncUploadError(413, "One of the blog photos is too large. Please choose a smaller image and publish again.");
+  }
+
   const currentStorageBytes = await storedPhotoBytesForUser(userId);
   const replacingBytes = Number(existing?.byteSize ?? 0);
   if (currentStorageBytes - replacingBytes + upload.buffer.length > ACCOUNT_STORAGE_LIMIT_BYTES) {
@@ -225,7 +240,7 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
   }
 
   return {
-    ...stripPhotoUploadData(photo),
+    ...cleanPhoto,
     imageUrl: publicImagePath(photoId),
   };
 }
@@ -338,13 +353,14 @@ async function canServePublicPhoto(photoId: string, password?: string) {
 
 router.get("/public/images/:photoId", async (req, res) => {
   const password = typeof req.query.password === "string" ? req.query.password : undefined;
-  const userId = await canServePublicPhoto(req.params.photoId, password);
+  const photoId = requestPhotoId(req.params.photoId);
+  const userId = await canServePublicPhoto(photoId, password);
   if (!userId) {
     res.status(404).json({ error: "Not found" });
     return;
   }
   const [row] = await db.select().from(placePhotos).where(and(
-    eq(placePhotos.id, req.params.photoId),
+    eq(placePhotos.id, photoId),
     eq(placePhotos.userId, userId),
   ));
   if (!row) {

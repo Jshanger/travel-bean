@@ -134,12 +134,34 @@ function photoContentType(uri: string) {
   return 'image/jpeg';
 }
 
-async function readPhotoBlob(uri: string) {
+function absolutePhotoFetchUrl(uri: string) {
+  if (/^(https?:|file:|blob:|asset-library:|ph:)/i.test(uri)) return uri;
+  if (uri.startsWith('/api/')) {
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    return domain ? `https://${domain}${uri}` : uri;
+  }
+  return uri;
+}
+
+function isPrivateBeanPhotoUrl(uri: string | undefined) {
+  return Boolean(uri && /^\/api\/bean\/photos\/img\//i.test(uri));
+}
+
+async function readPhotoBlob(uri: string, token?: string | null) {
   return new Promise<Blob>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', uri, true);
+    xhr.open('GET', absolutePhotoFetchUrl(uri), true);
     xhr.responseType = 'blob';
-    xhr.onload = () => resolve(xhr.response as Blob);
+    if (token && isPrivateBeanPhotoUrl(uri)) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+    xhr.onload = () => {
+      if ((xhr.status >= 200 && xhr.status < 300) || (xhr.status === 0 && xhr.response)) {
+        resolve(xhr.response as Blob);
+        return;
+      }
+      reject(new Error(`Could not read the selected photo (${xhr.status})`));
+    };
     xhr.onerror = () => reject(new Error('Could not read the selected photo'));
     xhr.send();
   });
@@ -149,7 +171,6 @@ function shouldUploadForPublicBlog(uri: string | undefined) {
   if (!uri) return false;
   if (/^https?:\/\//i.test(uri)) return false;
   if (/^\/api\/blog\/public\/images\//i.test(uri)) return false;
-  if (/^\/api\/bean\/photos\/img\//i.test(uri)) return false;
   return true;
 }
 
@@ -162,18 +183,18 @@ async function blobToDataUrl(blob: Blob) {
   });
 }
 
-async function photoDataUrl(uri: string) {
+async function photoDataUrl(uri: string, token?: string | null) {
   const contentType = photoContentType(uri);
   if (/^data:image\//i.test(uri)) return uri;
   if (Platform.OS !== 'web' && /^file:\/\//i.test(uri)) {
     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
     return `data:${contentType};base64,${base64}`;
   }
-  const blob = await readPhotoBlob(uri);
+  const blob = await readPhotoBlob(uri, token);
   return blobToDataUrl(blob);
 }
 
-async function prepareBlogPostsForPublicSync(posts: BlogPost[]) {
+async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string | null) {
   const prepared: BlogPost[] = [];
   for (const post of posts) {
     const photos = [];
@@ -182,7 +203,7 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[]) {
         try {
           photos.push({
             ...photo,
-            imageData: await photoDataUrl(photo.imageUrl),
+            imageData: await photoDataUrl(photo.imageUrl, token),
           } as typeof photo & { imageData?: string });
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', error);
@@ -357,9 +378,23 @@ async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: Blo
   if (!savedSettings) {
     throw new Error('Could not publish blog settings.');
   }
+  const localById = new Map(posts.map(post => [post.id, post]));
+  const syncedPosts = Array.isArray(response.posts)
+    ? response.posts.map((row: any) => {
+      const synced = mapBlogPost(row);
+      const local = localById.get(synced.id);
+      if (!local) return synced;
+      return {
+        ...synced,
+        coverPhotoId: local.coverPhotoId ?? synced.coverPhotoId,
+        coverImageUrl: local.coverImageUrl ?? synced.coverImageUrl,
+        photos: local.photos,
+      };
+    })
+    : posts;
   return {
     settings: savedSettings,
-    posts: Array.isArray(response.posts) ? response.posts.map(mapBlogPost) : posts,
+    posts: syncedPosts,
   };
 }
 
