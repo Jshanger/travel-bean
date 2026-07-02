@@ -589,6 +589,18 @@ export default function JournalScreen() {
                 </View>
               </View>
 
+              <View style={[styles.blogArticleGuide, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
+                <View style={styles.blogArticleGuideIcon}>
+                  <Feather name="file-text" size={18} color="#153A46" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.blogArticleGuideTitle}>Blog article source</Text>
+                  <Text style={styles.blogArticleGuideText}>
+                    Your title, place, date, cover photo, photos, summary, and long journal entry carry into the blog draft. The long journal entry becomes the main article text.
+                  </Text>
+                </View>
+              </View>
+
               <View style={[styles.editorPreviewWrap, { maxWidth: detailMaxWidth }]}>
                 <BeanCollageCard
                   place={editForm.name}
@@ -611,22 +623,37 @@ export default function JournalScreen() {
               <View style={[styles.editorCard, isWideWeb && { width: '100%', maxWidth: detailMaxWidth, alignSelf: 'center' }]}>
             <View style={styles.formRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Place</Text>
+                <View style={styles.labelRow}>
+                  <Text style={[styles.label, styles.labelInRow]}>Place</Text>
+                  <Text style={styles.blogFieldPill}>Blog location</Text>
+                </View>
                 <TextInput editable={!readOnly} value={editForm.name} onChangeText={name => setEditForm(prev => ({ ...prev, name }))} style={styles.input} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Country</Text>
+                <View style={styles.labelRow}>
+                  <Text style={[styles.label, styles.labelInRow]}>Country</Text>
+                  <Text style={styles.blogFieldPill}>Blog location</Text>
+                </View>
                 <TextInput editable={!readOnly} value={editForm.country} onChangeText={country => setEditForm(prev => ({ ...prev, country }))} style={styles.input} />
               </View>
             </View>
 
-            <Text style={styles.label}>Date</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, styles.labelInRow]}>Date</Text>
+              <Text style={styles.blogFieldPill}>Blog date</Text>
+            </View>
             <TextInput editable={!readOnly} value={editForm.dateVisited} onChangeText={dateVisited => setEditForm(prev => ({ ...prev, dateVisited }))} style={styles.input} />
 
-            <Text style={styles.label}>Journal title</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, styles.labelInRow]}>Journal title</Text>
+              <Text style={styles.blogFieldPill}>Blog title</Text>
+            </View>
             <TextInput editable={!readOnly} value={editForm.title} onChangeText={title => setEditForm(prev => ({ ...prev, title }))} style={styles.input} />
 
-            <Text style={styles.label}>Memory summary</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, styles.labelInRow]}>Memory summary</Text>
+              <Text style={styles.blogFieldPill}>Blog intro</Text>
+            </View>
             <TextInput
               editable={!readOnly}
               value={editForm.summary}
@@ -637,6 +664,7 @@ export default function JournalScreen() {
             />
 
             <Text style={styles.label}>Memory prompts</Text>
+            <Text style={styles.blogFieldHelp}>Prompts help shape the Bean. The published blog will use your summary or long journal entry instead of listing these as separate questions.</Text>
             {editForm.promptResponses.map((item, index) => (
               <View key={item.id} style={styles.editPromptBox}>
                 <Text style={styles.editPromptQuestion}>{item.prompt}</Text>
@@ -654,7 +682,10 @@ export default function JournalScreen() {
               </View>
             ))}
 
-            <Text style={styles.label}>Long journal entry</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, styles.labelInRow]}>Long journal entry</Text>
+              <Text style={styles.blogFieldPill}>Main blog article</Text>
+            </View>
             <TextInput
               editable={!readOnly}
               value={editForm.extraNotes}
@@ -666,7 +697,10 @@ export default function JournalScreen() {
               style={[styles.input, styles.notesInput]}
             />
 
-            <Text style={styles.label}>Photos</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, styles.labelInRow]}>Photos</Text>
+              <Text style={styles.blogFieldPill}>Blog gallery</Text>
+            </View>
             <Text style={styles.photoOrderHint}>First photo is the cover. Use arrows to reorder or make another photo the cover.</Text>
             <View style={styles.editPhotoGrid}>
               {editForm.photos.map((photo, index) => (
@@ -1140,10 +1174,18 @@ const styles = StyleSheet.create({
   editorMascotCard: { marginBottom: 14, borderRadius: 18, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
   editorMascotTitle: { color: INK, fontSize: 16, fontFamily: 'Inter_700Bold' },
   editorMascotText: { color: MUTED, fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', marginTop: 3 },
+  blogArticleGuide: { marginBottom: 14, borderRadius: 18, borderWidth: 1, borderColor: '#BFE7D9', backgroundColor: '#F0FBF6', padding: 13, flexDirection: 'row', alignItems: 'flex-start', gap: 11 },
+  blogArticleGuideIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#C7F0E2', alignItems: 'center', justifyContent: 'center' },
+  blogArticleGuideTitle: { color: INK, fontSize: 15, fontFamily: 'Inter_700Bold' },
+  blogArticleGuideText: { color: '#5D726D', fontSize: 12, lineHeight: 18, fontFamily: 'Inter_600SemiBold', marginTop: 4 },
   editorPreviewWrap: { width: '100%', maxWidth: 640, alignSelf: 'center', marginBottom: 14 },
   editorCard: { borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 15 },
   formRow: { flexDirection: 'row', gap: 10 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 10, marginBottom: 6 },
   label: { color: MUTED, fontSize: 12, fontFamily: 'Inter_700Bold', marginBottom: 6, marginTop: 10 },
+  labelInRow: { marginTop: 0, marginBottom: 0 },
+  blogFieldPill: { color: '#12614D', fontSize: 10, fontFamily: 'Inter_700Bold', backgroundColor: '#DDF7ED', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, overflow: 'hidden' },
+  blogFieldHelp: { color: '#7A6B62', fontSize: 12, lineHeight: 17, fontFamily: 'Inter_600SemiBold', marginTop: -2, marginBottom: 10 },
   input: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: BORDER, backgroundColor: '#FFF8EF', paddingHorizontal: 12, paddingVertical: 10, color: INK, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   lockedInput: { color: MUTED, backgroundColor: '#FFF3E8' },
   summaryInput: { minHeight: 116, textAlignVertical: 'top', lineHeight: 20, paddingTop: 12 },
