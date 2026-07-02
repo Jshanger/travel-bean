@@ -243,6 +243,7 @@ function readableBlogBody(post: BlogPost) {
   if (!body) return '';
   const cleanedPromptBody = removePromptHeadings(body);
   if (cleanedPromptBody !== body) {
+    if (cleanedPromptBody) return cleanedPromptBody;
     const opening = post.opening.trim();
     if (opening && opening !== post.subtitle.trim()) return opening;
     return '';
@@ -270,13 +271,26 @@ function removePromptHeadings(body: string) {
   ];
   const blocks = body.split(/\n{2,}/).map(block => block.trim()).filter(Boolean);
   let changed = false;
-  const cleaned = blocks.map(block => {
+  const kept: string[] = [];
+
+  function isPromptBlock(block: string) {
     const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
-    if (lines.length < 2) return block;
     const first = lines[0].toLowerCase().replace(/[?!.]+$/, '');
-    if (!promptStarters.some(starter => first.startsWith(starter))) return block;
+    return promptStarters.some(starter => first.startsWith(starter));
+  }
+
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index];
+    if (!isPromptBlock(block)) {
+      kept.push(block);
+      continue;
+    }
     changed = true;
-    return lines.slice(1).join(' ');
-  });
-  return changed ? cleaned.join('\n\n').trim() : body;
+    const nextBlock = blocks[index + 1];
+    const followingBlock = blocks[index + 2];
+    const answerLooksStandalone = nextBlock && !isPromptBlock(nextBlock) && (!followingBlock || isPromptBlock(followingBlock));
+    if (answerLooksStandalone) index += 1;
+  }
+
+  return changed ? kept.join('\n\n').trim() : body;
 }

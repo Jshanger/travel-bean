@@ -245,7 +245,7 @@ async function uploadPlacePhoto(placeId: string, photo: BeanPhoto, token: string
       'Content-Type': photoContentType(photo.imageUrl),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: await readPhotoBlob(photo.imageUrl),
+    body: await readPhotoBlob(photo.imageUrl, token),
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -380,8 +380,8 @@ function parseStoredBlogPosts(value: string | null): BlogPost[] {
   }
 }
 
-async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: BlogPost[]): Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }> {
-  const syncPosts = await prepareBlogPostsForPublicSync(posts);
+async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: BlogPost[], token?: string | null): Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }> {
+  const syncPosts = await prepareBlogPostsForPublicSync(posts, token);
   const response = await blogApiFetch('/public-sync', null, {
     method: 'POST',
     body: JSON.stringify({
@@ -1006,7 +1006,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const publishedPost = publishBlogPost(postToPublish, postToPublish.privacy === 'password' ? 'password' : 'public');
       const publishedSettings: TravelBlogSettings = { ...blogSettings, privacy: 'public', updatedAt: new Date().toISOString() };
       const nextPosts = blogPosts.map(item => item.id === id ? publishedPost : item);
-      const synced = await publishLocalBlogSnapshot(publishedSettings, nextPosts);
+      const token = await getToken().catch(() => null);
+      const synced = await publishLocalBlogSnapshot(publishedSettings, nextPosts, token);
       await storeBlogSettings(synced.settings);
       await storeBlogPosts(synced.posts);
       return synced.posts.find(item => item.id === id) ?? publishedPost;
@@ -1088,9 +1089,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
     if (useLocalData) {
+      const token = await getToken().catch(() => null);
       const synced = await publishLocalBlogSnapshot(
         { ...blogSettings, privacy: 'public', updatedAt: new Date().toISOString() },
         blogPosts,
+        token,
       );
       await storeBlogSettings(synced.settings);
       await storeBlogPosts(synced.posts);

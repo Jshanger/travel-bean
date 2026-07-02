@@ -241,6 +241,22 @@ export default function BlogEditorScreen() {
           <Feather name="refresh-cw" size={15} color={ORANGE} />
           <Text style={styles.refreshText}>Refresh from Journal Entry</Text>
         </TouchableOpacity>
+        <View style={styles.editorQuickActions}>
+          <TouchableOpacity style={styles.quickDoneButton} onPress={dismissKeyboard} activeOpacity={0.86}>
+            <Feather name="chevron-down" size={16} color={MUTED} />
+            <Text style={styles.quickDoneText}>Done writing</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.quickSaveButton, saving && styles.stickyButtonDisabled]} onPress={save} disabled={saving} activeOpacity={0.88}>
+            <Feather name="save" size={15} color="#fff" />
+            <Text style={styles.quickSaveText}>{saving ? 'Saving...' : 'Save draft'}</Text>
+          </TouchableOpacity>
+        </View>
+        {saveNotice ? (
+          <View style={[styles.saveNotice, saveNotice.type === 'error' && styles.saveNoticeError]}>
+            <Feather name={saveNotice.type === 'success' ? 'check-circle' : 'alert-circle'} size={17} color={saveNotice.type === 'success' ? '#153A46' : '#B83224'} />
+            <Text style={[styles.saveNoticeText, saveNotice.type === 'error' && styles.saveNoticeTextError]}>{saveNotice.message}</Text>
+          </View>
+        ) : null}
 
         <Text style={styles.label}>Privacy</Text>
         <View style={styles.segmentRow}>
@@ -297,12 +313,6 @@ export default function BlogEditorScreen() {
           <Feather name="save" size={17} color="#fff" />
           <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save Draft'}</Text>
         </TouchableOpacity>
-        {saveNotice ? (
-          <View style={[styles.saveNotice, saveNotice.type === 'error' && styles.saveNoticeError]}>
-            <Feather name={saveNotice.type === 'success' ? 'check-circle' : 'alert-circle'} size={17} color={saveNotice.type === 'success' ? '#153A46' : '#B83224'} />
-            <Text style={[styles.saveNoticeText, saveNotice.type === 'error' && styles.saveNoticeTextError]}>{saveNotice.message}</Text>
-          </View>
-        ) : null}
         {draft.status === 'published' ? (
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.secondaryButton} onPress={openPublicLink} activeOpacity={0.86}>
@@ -375,6 +385,11 @@ const styles = StyleSheet.create({
   helperText: { color: MUTED, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium', marginTop: 7 },
   refreshButton: { alignSelf: 'flex-start', minHeight: 38, borderRadius: 19, borderWidth: 1, borderColor: BORDER, backgroundColor: '#FFF1E6', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 10 },
   refreshText: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold' },
+  editorQuickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
+  quickDoneButton: { minHeight: 42, borderRadius: 21, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  quickDoneText: { color: MUTED, fontSize: 13, fontFamily: 'Inter_700Bold' },
+  quickSaveButton: { flexGrow: 1, minHeight: 42, borderRadius: 21, backgroundColor: '#153A46', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  quickSaveText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
   formRow: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 10 },
   segmentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   segment: { flexGrow: 1, minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
