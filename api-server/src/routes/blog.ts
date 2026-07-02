@@ -180,6 +180,30 @@ function stripPhotoUploadData(photo: any) {
   return clean;
 }
 
+function urlPath(value: unknown) {
+  if (typeof value !== "string") return "";
+  try {
+    return new URL(value, "https://travelbean.local").pathname;
+  } catch {
+    return value.split("?")[0];
+  }
+}
+
+function isPrivateBeanPhotoUrl(value: unknown) {
+  return /^\/api\/bean\/photos\/img\//i.test(urlPath(value));
+}
+
+function isPublicBlogImageUrl(value: unknown) {
+  return /^\/api\/blog\/public\/images\//i.test(urlPath(value));
+}
+
+function isReusablePublicImageUrl(value: unknown) {
+  if (typeof value !== "string") return false;
+  if (/^data:image\//i.test(value)) return true;
+  if (!/^https?:\/\//i.test(value)) return false;
+  return !isPrivateBeanPhotoUrl(value) && !isPublicBlogImageUrl(value);
+}
+
 async function storedPhotoBytesForUser(userId: string) {
   const [usage] = await db
     .select({ bytes: sql<number>`coalesce(sum(${placePhotos.byteSize}), 0)` })
@@ -200,7 +224,7 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
   ));
   if (!upload) {
     if (existing) return { ...cleanPhoto, imageUrl: publicImagePath(photoId) };
-    if (typeof cleanPhoto.imageUrl === "string" && /^https?:\/\//i.test(cleanPhoto.imageUrl)) return cleanPhoto;
+    if (isReusablePublicImageUrl(cleanPhoto.imageUrl)) return cleanPhoto;
     throw new PublicSyncUploadError(400, "Could not publish one of the blog photos. Please re-add the photo and publish again.");
   }
 
@@ -263,7 +287,7 @@ async function normalizePublicSyncPostPhotos(userId: string, post: any) {
 }
 
 function canUseStoredImageUrl(value: unknown) {
-  return typeof value === "string" && /^(https?:|data:image\/)/i.test(value);
+  return isReusablePublicImageUrl(value);
 }
 
 function publicBlogPhotos(post: typeof blogPosts.$inferSelect, options: { redacted?: boolean; password?: string } = {}) {

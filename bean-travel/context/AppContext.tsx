@@ -143,8 +143,22 @@ function absolutePhotoFetchUrl(uri: string) {
   return uri;
 }
 
+function apiPathFromPhotoUrl(uri: string | undefined) {
+  if (!uri) return '';
+  try {
+    const parsed = new URL(uri, 'https://travelbean.local');
+    return parsed.pathname;
+  } catch {
+    return uri.split('?')[0];
+  }
+}
+
 function isPrivateBeanPhotoUrl(uri: string | undefined) {
-  return Boolean(uri && /^\/api\/bean\/photos\/img\//i.test(uri));
+  return /^\/api\/bean\/photos\/img\//i.test(apiPathFromPhotoUrl(uri));
+}
+
+function isPublicBlogPhotoUrl(uri: string | undefined) {
+  return /^\/api\/blog\/public\/images\//i.test(apiPathFromPhotoUrl(uri));
 }
 
 async function readPhotoBlob(uri: string, token?: string | null) {
@@ -169,8 +183,9 @@ async function readPhotoBlob(uri: string, token?: string | null) {
 
 function shouldUploadForPublicBlog(uri: string | undefined) {
   if (!uri) return false;
+  if (isPublicBlogPhotoUrl(uri)) return false;
+  if (isPrivateBeanPhotoUrl(uri)) return true;
   if (/^https?:\/\//i.test(uri)) return false;
-  if (/^\/api\/blog\/public\/images\//i.test(uri)) return false;
   return true;
 }
 
