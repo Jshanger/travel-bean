@@ -25,10 +25,12 @@ export default function BlogEditorScreen() {
   const post = params.id ? getBlogPostById(String(params.id)) : undefined;
   const [draft, setDraft] = useState<BlogPost | undefined>(post);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [saveNotice, setSaveNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [premiumVisible, setPremiumVisible] = useState(false);
   const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
   const editorBottomPadding = Platform.OS === 'web' ? 260 : Math.max(insets.bottom + 260, 300);
+  const isBusy = saving || publishing;
 
   useEffect(() => {
     setDraft(post);
@@ -61,7 +63,7 @@ export default function BlogEditorScreen() {
   }
 
   async function save() {
-    if (!draft) return;
+    if (!draft || publishing) return;
     const draftToSave = draftForSave(draft);
     if (draft.status === 'published' && draftToSave.privacy === 'password' && !draftToSave.password) {
       setSaveNotice({ type: 'error', message: 'Add a post password before saving this protected live story.' });
@@ -81,7 +83,7 @@ export default function BlogEditorScreen() {
   }
 
   async function publish() {
-    if (!draft) return;
+    if (!draft || isBusy) return;
     if (!isPremium) {
       setPremiumVisible(true);
       setSaveNotice({ type: 'error', message: 'Publishing is Premium-only. You can keep editing this draft for free.' });
@@ -101,18 +103,21 @@ export default function BlogEditorScreen() {
       return;
     }
     async function publishCurrentDraft() {
-      setSaving(true);
+      setPublishing(true);
+      setSaveNotice({ type: 'success', message: 'Preparing photos and publishing. Keep Travel Bean open for a moment.' });
       try {
         await editBlogPost(draftToPublish.id, draftToPublish);
         const published = await publishBlogPostById(draftToPublish.id, draftToPublish);
         if (published) {
           setDraft(published);
+          setSaveNotice({ type: 'success', message: 'Published. Your public Travel Bean Blog is updated.' });
           Alert.alert('Published', 'Your post is live on your public Travel Bean Blog.');
         }
       } catch (error: any) {
+        setSaveNotice({ type: 'error', message: error?.message ?? 'Could not publish publicly. Please try again once you are online.' });
         Alert.alert('Could not publish publicly', error?.message ?? 'Please sign in and try again once you are online.');
       } finally {
-        setSaving(false);
+        setPublishing(false);
       }
     }
     if (Platform.OS === 'web') {
@@ -246,7 +251,7 @@ export default function BlogEditorScreen() {
             <Feather name="chevron-down" size={16} color={MUTED} />
             <Text style={styles.quickDoneText}>Done writing</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.quickSaveButton, saving && styles.stickyButtonDisabled]} onPress={save} disabled={saving} activeOpacity={0.88}>
+          <TouchableOpacity style={[styles.quickSaveButton, isBusy && styles.stickyButtonDisabled]} onPress={save} disabled={isBusy} activeOpacity={0.88}>
             <Feather name="save" size={15} color="#fff" />
             <Text style={styles.quickSaveText}>{saving ? 'Saving...' : 'Save draft'}</Text>
           </TouchableOpacity>
@@ -309,7 +314,7 @@ export default function BlogEditorScreen() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={save} disabled={saving} activeOpacity={0.88}>
+        <TouchableOpacity style={[styles.saveButton, isBusy && styles.stickyButtonDisabled]} onPress={save} disabled={isBusy} activeOpacity={0.88}>
           <Feather name="save" size={17} color="#fff" />
           <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save Draft'}</Text>
         </TouchableOpacity>
@@ -333,9 +338,9 @@ export default function BlogEditorScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.publishButton} onPress={publish} activeOpacity={0.88}>
+          <TouchableOpacity style={[styles.publishButton, isBusy && styles.stickyButtonDisabled]} onPress={publish} disabled={isBusy} activeOpacity={0.88}>
             <Feather name="globe" size={17} color="#fff" />
-            <Text style={styles.publishText}>Publish to Travel Blog</Text>
+            <Text style={styles.publishText}>{publishing ? 'Publishing photos...' : 'Publish to Travel Blog'}</Text>
           </TouchableOpacity>
         )}
         </View>
@@ -345,7 +350,7 @@ export default function BlogEditorScreen() {
           <Feather name="chevron-down" size={16} color={MUTED} />
           <Text style={styles.stickyQuietText}>Done</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.stickySaveButton, saving && styles.stickyButtonDisabled]} onPress={save} disabled={saving} activeOpacity={0.88}>
+        <TouchableOpacity style={[styles.stickySaveButton, isBusy && styles.stickyButtonDisabled]} onPress={save} disabled={isBusy} activeOpacity={0.88}>
           <Feather name="save" size={15} color="#fff" />
           <Text style={styles.stickyButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
         </TouchableOpacity>
@@ -355,9 +360,9 @@ export default function BlogEditorScreen() {
             <Text style={styles.stickyButtonText}>View</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.stickyPublishButton} onPress={publish} activeOpacity={0.88}>
+          <TouchableOpacity style={[styles.stickyPublishButton, isBusy && styles.stickyButtonDisabled]} onPress={publish} disabled={isBusy} activeOpacity={0.88}>
             <Feather name="globe" size={15} color="#fff" />
-            <Text style={styles.stickyButtonText}>Publish</Text>
+            <Text style={styles.stickyButtonText}>{publishing ? 'Publishing' : 'Publish'}</Text>
           </TouchableOpacity>
         )}
       </View>

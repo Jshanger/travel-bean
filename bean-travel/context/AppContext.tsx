@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { lookupCoords } from '@/constants/cityCoords';
@@ -19,6 +20,8 @@ const PREMIUM_STORAGE_KEY = 'travel-bean-premium-state';
 const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
+const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1600;
+const PUBLIC_BLOG_IMAGE_QUALITY = 0.72;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -198,7 +201,59 @@ async function blobToDataUrl(blob: Blob) {
   });
 }
 
+function dataUrlBase64(dataUrl: string) {
+  const comma = dataUrl.indexOf(',');
+  return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+}
+
+async function blobToBase64(blob: Blob) {
+  return dataUrlBase64(await blobToDataUrl(blob));
+}
+
+async function writeTempPhotoForOptimization(uri: string, token?: string | null) {
+  const blob = await readPhotoBlob(uri, token);
+  const base64 = await blobToBase64(blob);
+  const directory = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!directory) throw new Error('Could not prepare a temporary photo file');
+  const tempUri = `${directory}travel-bean-blog-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+  await FileSystem.writeAsStringAsync(tempUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  return tempUri;
+}
+
+async function optimizedNativePhotoDataUrl(uri: string, token?: string | null) {
+  let sourceUri = uri;
+  let tempUri: string | null = null;
+  try {
+    if (!/^file:\/\//i.test(uri) && !/^data:image\//i.test(uri)) {
+      tempUri = await writeTempPhotoForOptimization(uri, token);
+      sourceUri = tempUri;
+    }
+    const result = await ImageManipulator.manipulateAsync(
+      sourceUri,
+      [{ resize: { width: PUBLIC_BLOG_IMAGE_MAX_WIDTH } }],
+      {
+        base64: true,
+        compress: PUBLIC_BLOG_IMAGE_QUALITY,
+        format: ImageManipulator.SaveFormat.JPEG,
+      },
+    );
+    if (!result.base64) throw new Error('Could not optimize photo data');
+    return `data:image/jpeg;base64,${result.base64}`;
+  } finally {
+    if (tempUri) {
+      FileSystem.deleteAsync(tempUri, { idempotent: true }).catch(() => undefined);
+    }
+  }
+}
+
 async function photoDataUrl(uri: string, token?: string | null) {
+  if (Platform.OS !== 'web') {
+    try {
+      return await optimizedNativePhotoDataUrl(uri, token);
+    } catch (error) {
+      console.warn('Could not optimize blog photo before upload', error);
+    }
+  }
   const contentType = photoContentType(uri);
   if (/^data:image\//i.test(uri)) return uri;
   if (Platform.OS !== 'web' && /^file:\/\//i.test(uri)) {
