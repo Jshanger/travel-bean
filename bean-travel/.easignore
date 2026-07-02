@@ -8,8 +8,10 @@ web-build/
 
 **/.DS_Store
 **/*.tsbuildinfo
+**/*.zip
 
 ../.git/
 ../.agents/
 ../.codex/
+../*.zip
 ../api-server/dist/

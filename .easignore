@@ -6,6 +6,7 @@
 **/.expo/
 **/node_modules/
 **/*.tsbuildinfo
+**/*.zip
 
 bean-travel/dist/
 bean-travel/static-build/
