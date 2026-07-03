@@ -22,6 +22,8 @@ const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
 const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1600;
 const PUBLIC_BLOG_IMAGE_QUALITY = 0.72;
+const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 15000;
+const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 22000;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -164,11 +166,28 @@ function isPublicBlogPhotoUrl(uri: string | undefined) {
   return /^\/api\/blog\/public\/images\//i.test(apiPathFromPhotoUrl(uri));
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      value => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
 async function readPhotoBlob(uri: string, token?: string | null) {
   return new Promise<Blob>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', absolutePhotoFetchUrl(uri), true);
     xhr.responseType = 'blob';
+    xhr.timeout = PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS;
     if (token && isPrivateBeanPhotoUrl(uri)) {
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     }
@@ -180,6 +199,7 @@ async function readPhotoBlob(uri: string, token?: string | null) {
       reject(new Error(`Could not read the selected photo (${xhr.status})`));
     };
     xhr.onerror = () => reject(new Error('Could not read the selected photo'));
+    xhr.ontimeout = () => reject(new Error('Reading the selected photo took too long'));
     xhr.send();
   });
 }
@@ -208,6 +228,60 @@ function dataUrlBase64(dataUrl: string) {
 
 async function blobToBase64(blob: Blob) {
   return dataUrlBase64(await blobToDataUrl(blob));
+}
+
+async function dataUrlToBlob(dataUrl: string) {
+  const response = await fetch(dataUrl);
+  if (!response.ok) throw new Error('Could not read photo data');
+  return response.blob();
+}
+
+async function optimizedWebPhotoDataUrl(blob: Blob) {
+  if (typeof document === 'undefined' || typeof window === 'undefined' || typeof URL === 'undefined') {
+    return blobToDataUrl(blob);
+  }
+  return new Promise<string>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(blob);
+    const image = new window.Image();
+    let finished = false;
+    const finish = (callback: () => void) => {
+      if (finished) return;
+      finished = true;
+      URL.revokeObjectURL(objectUrl);
+      callback();
+    };
+
+    image.onload = () => {
+      const scale = Math.min(1, PUBLIC_BLOG_IMAGE_MAX_WIDTH / Math.max(image.width, 1));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        finish(() => reject(new Error('Could not optimize photo')));
+        return;
+      }
+      context.drawImage(image, 0, 0, width, height);
+      canvas.toBlob(
+        nextBlob => {
+          if (!nextBlob) {
+            finish(() => reject(new Error('Could not optimize photo')));
+            return;
+          }
+          blobToDataUrl(nextBlob).then(
+            dataUrl => finish(() => resolve(dataUrl)),
+            error => finish(() => reject(error)),
+          );
+        },
+        'image/jpeg',
+        PUBLIC_BLOG_IMAGE_QUALITY,
+      );
+    };
+    image.onerror = () => finish(() => reject(new Error('Could not optimize photo')));
+    image.src = objectUrl;
+  });
 }
 
 async function writeTempPhotoForOptimization(uri: string, token?: string | null) {
@@ -249,40 +323,74 @@ async function optimizedNativePhotoDataUrl(uri: string, token?: string | null) {
 async function photoDataUrl(uri: string, token?: string | null) {
   if (Platform.OS !== 'web') {
     try {
-      return await optimizedNativePhotoDataUrl(uri, token);
+      return await withTimeout(
+        optimizedNativePhotoDataUrl(uri, token),
+        PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
+        'Preparing the photo took too long',
+      );
     } catch (error) {
       console.warn('Could not optimize blog photo before upload', error);
     }
   }
   const contentType = photoContentType(uri);
-  if (/^data:image\//i.test(uri)) return uri;
+  if (/^data:image\//i.test(uri)) {
+    if (Platform.OS === 'web') {
+      try {
+        const blob = await dataUrlToBlob(uri);
+        return await withTimeout(
+          optimizedWebPhotoDataUrl(blob),
+          PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
+          'Preparing the photo took too long',
+        );
+      } catch (error) {
+        console.warn('Could not optimize web blog photo before upload', error);
+      }
+    }
+    return uri;
+  }
   if (Platform.OS !== 'web' && /^file:\/\//i.test(uri)) {
     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
     return `data:${contentType};base64,${base64}`;
   }
   const blob = await readPhotoBlob(uri, token);
+  if (Platform.OS === 'web') {
+    try {
+      return await withTimeout(
+        optimizedWebPhotoDataUrl(blob),
+        PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
+        'Preparing the photo took too long',
+      );
+    } catch (error) {
+      console.warn('Could not optimize web blog photo before upload', error);
+    }
+  }
   return blobToDataUrl(blob);
 }
 
 async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string | null) {
   const prepared: BlogPost[] = [];
   for (const post of posts) {
-    const photos = [];
-    for (const photo of post.photos.slice(0, 8)) {
+    const publicPhotos = post.photos
+      .slice(0, 8)
+      .filter(photo => photo.included !== false || photo.id === post.coverPhotoId);
+    const photos = await Promise.all(publicPhotos.map(async photo => {
       if (shouldUploadForPublicBlog(photo.imageUrl)) {
         try {
-          photos.push({
+          return {
             ...photo,
-            imageData: await photoDataUrl(photo.imageUrl, token),
-          } as typeof photo & { imageData?: string });
+            imageData: await withTimeout(
+              photoDataUrl(photo.imageUrl, token),
+              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS + 3000,
+              'Preparing one of the blog photos took too long',
+            ),
+          } as typeof photo & { imageData?: string };
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', error);
-          throw new Error('Could not prepare one of the blog photos for public upload. Please re-add the photo and publish again.');
+          throw new Error('Could not prepare one of the blog photos for public upload. Try publishing with fewer photos, or re-add the photo and publish again.');
         }
-      } else {
-        photos.push(photo);
       }
-    }
+      return photo;
+    }));
     const coverPhoto = photos.find(photo => photo.id === post.coverPhotoId);
     prepared.push({
       ...post,
