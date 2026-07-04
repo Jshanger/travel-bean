@@ -20,12 +20,12 @@ const PREMIUM_STORAGE_KEY = 'travel-bean-premium-state';
 const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
-const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 900;
-const PUBLIC_BLOG_IMAGE_QUALITY = 0.55;
-const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-04-fast-photo-upload-v3';
+const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 720;
+const PUBLIC_BLOG_IMAGE_QUALITY = 0.5;
+const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-04-reliable-four-photo-upload-v4';
 const PUBLIC_BLOG_MAX_PUBLISH_PHOTOS = 4;
-const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 5000;
-const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 8000;
+const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 20000;
+const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 45000;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -325,13 +325,10 @@ async function optimizedNativePhotoDataUrl(uri: string, token?: string | null) {
 async function photoDataUrl(uri: string, token?: string | null) {
   if (Platform.OS !== 'web') {
     try {
-      return await withTimeout(
-        optimizedNativePhotoDataUrl(uri, token),
-        PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
-        'Preparing the photo took too long',
-      );
+      return await optimizedNativePhotoDataUrl(uri, token);
     } catch (error) {
       console.warn('Could not optimize blog photo before upload', error);
+      throw new Error('Could not optimize the selected photo for publishing. Please re-add the photo and try again.');
     }
   }
   const contentType = photoContentType(uri);
@@ -387,7 +384,7 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
             ...photo,
             imageData: await withTimeout(
               photoDataUrl(photo.imageUrl, token),
-              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS + 1500,
+              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
               'Preparing one of the blog photos took too long',
             ),
           } as typeof photo & { imageData?: string };

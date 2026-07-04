@@ -16,11 +16,11 @@ const ORANGE = '#F26A2E';
 const PAPER = '#FFF8EF';
 const CARD = '#FFFDF8';
 const BORDER = '#F1D7C5';
-const BLOG_PUBLISH_TIMEOUT_MS = 10000;
+const BLOG_PUBLISH_TIMEOUT_MS = 60000;
 
 function withPublishTimeout<T>(promise: Promise<T>) {
   return new Promise<T>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Publishing is taking too long. Try again with fewer photos or a stronger connection.')), BLOG_PUBLISH_TIMEOUT_MS);
+    const timeout = setTimeout(() => reject(new Error('Publishing is taking longer than expected. Please keep Travel Bean open and try again on a stronger connection.')), BLOG_PUBLISH_TIMEOUT_MS);
     promise.then(
       value => {
         clearTimeout(timeout);
@@ -121,7 +121,7 @@ export default function BlogEditorScreen() {
     }
     async function publishCurrentDraft() {
       setPublishing(true);
-      setSaveNotice({ type: 'success', message: 'Optimizing photos and publishing. This should take about 10 seconds.' });
+      setSaveNotice({ type: 'success', message: 'Optimizing up to 4 photos and publishing. Please keep Travel Bean open.' });
       try {
         await editBlogPost(draftToPublish.id, draftToPublish);
         const published = await withPublishTimeout(publishBlogPostById(draftToPublish.id, draftToPublish));
