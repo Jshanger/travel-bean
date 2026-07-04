@@ -20,11 +20,12 @@ const PREMIUM_STORAGE_KEY = 'travel-bean-premium-state';
 const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
-const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1600;
-const PUBLIC_BLOG_IMAGE_QUALITY = 0.72;
-const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-04-photo-upload-v2';
-const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 15000;
-const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 22000;
+const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 900;
+const PUBLIC_BLOG_IMAGE_QUALITY = 0.55;
+const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-04-fast-photo-upload-v3';
+const PUBLIC_BLOG_MAX_PUBLISH_PHOTOS = 4;
+const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 5000;
+const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 8000;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -371,9 +372,14 @@ async function photoDataUrl(uri: string, token?: string | null) {
 async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string | null) {
   const prepared: BlogPost[] = [];
   for (const post of posts) {
-    const publicPhotos = post.photos
+    const candidatePhotos = post.photos
       .slice(0, 8)
       .filter(photo => photo.included !== false || photo.id === post.coverPhotoId);
+    const coverPhoto = candidatePhotos.find(photo => photo.id === post.coverPhotoId);
+    const publicPhotos = [
+      ...(coverPhoto ? [coverPhoto] : []),
+      ...candidatePhotos.filter(photo => photo.id !== coverPhoto?.id),
+    ].slice(0, PUBLIC_BLOG_MAX_PUBLISH_PHOTOS);
     const photos = await Promise.all(publicPhotos.map(async photo => {
       if (shouldUploadForPublicBlog(photo.imageUrl)) {
         try {
@@ -381,7 +387,7 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
             ...photo,
             imageData: await withTimeout(
               photoDataUrl(photo.imageUrl, token),
-              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS + 3000,
+              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS + 1500,
               'Preparing one of the blog photos took too long',
             ),
           } as typeof photo & { imageData?: string };
@@ -392,11 +398,11 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
       }
       return photo;
     }));
-    const coverPhoto = photos.find(photo => photo.id === post.coverPhotoId);
+    const syncedCoverPhoto = photos.find(photo => photo.id === post.coverPhotoId);
     prepared.push({
       ...post,
       photos,
-      coverImageUrl: coverPhoto?.imageUrl ?? post.coverImageUrl,
+      coverImageUrl: syncedCoverPhoto?.imageUrl ?? post.coverImageUrl,
     } as BlogPost);
   }
   return prepared;
@@ -574,6 +580,32 @@ async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: Blo
   return {
     settings: savedSettings,
     posts: syncedPosts,
+  };
+}
+
+async function publishLocalBlogPost(settings: TravelBlogSettings, post: BlogPost, token?: string | null): Promise<{ settings: TravelBlogSettings; post: BlogPost }> {
+  const [syncPost] = await prepareBlogPostsForPublicSync([post], token);
+  const response = await blogApiFetch('/public-sync', null, {
+    method: 'POST',
+    body: JSON.stringify({
+      settings: { ...settings, privacy: 'public' },
+      posts: [syncPost],
+      replaceAll: false,
+    }),
+  });
+  const savedSettings = mapBlogSettings(response.settings);
+  if (!savedSettings) {
+    throw new Error('Could not publish blog settings.');
+  }
+  const syncedPost = Array.isArray(response.posts) && response.posts[0] ? mapBlogPost(response.posts[0]) : post;
+  return {
+    settings: savedSettings,
+    post: {
+      ...syncedPost,
+      coverPhotoId: post.coverPhotoId ?? syncedPost.coverPhotoId,
+      coverImageUrl: post.coverImageUrl ?? syncedPost.coverImageUrl,
+      photos: post.photos,
+    },
   };
 }
 
@@ -1169,12 +1201,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (useLocalData) {
       const publishedPost = publishBlogPost(postToPublish, postToPublish.privacy === 'password' ? 'password' : 'public');
       const publishedSettings: TravelBlogSettings = { ...blogSettings, privacy: 'public', updatedAt: new Date().toISOString() };
-      const nextPosts = blogPosts.map(item => item.id === id ? publishedPost : item);
       const token = await getToken().catch(() => null);
-      const synced = await publishLocalBlogSnapshot(publishedSettings, nextPosts, token);
+      const synced = await publishLocalBlogPost(publishedSettings, publishedPost, token);
       await storeBlogSettings(synced.settings);
-      await storeBlogPosts(synced.posts);
-      return synced.posts.find(item => item.id === id) ?? publishedPost;
+      const savedPost = synced.post;
+      await storeBlogPosts(blogPosts.map(item => item.id === id ? savedPost : item));
+      return savedPost;
     }
 
     const token = await getToken();

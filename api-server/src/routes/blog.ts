@@ -503,14 +503,17 @@ router.post("/public-sync", async (req, res) => {
   const incomingPosts = (Array.isArray(body.posts) ? body.posts : [])
     .filter((post: any) => post?.id && post?.slug && post?.title)
     .slice(0, 100);
-  const incomingIds = incomingPosts.map((post: any) => String(post.id));
-  if (incomingIds.length) {
-    await db.delete(blogPosts).where(and(
-      eq(blogPosts.userId, userId),
-      notInArray(blogPosts.id, incomingIds),
-    ));
-  } else {
-    await db.delete(blogPosts).where(eq(blogPosts.userId, userId));
+  const replaceAllPosts = body.replaceAll !== false;
+  if (replaceAllPosts) {
+    const incomingIds = incomingPosts.map((post: any) => String(post.id));
+    if (incomingIds.length) {
+      await db.delete(blogPosts).where(and(
+        eq(blogPosts.userId, userId),
+        notInArray(blogPosts.id, incomingIds),
+      ));
+    } else {
+      await db.delete(blogPosts).where(eq(blogPosts.userId, userId));
+    }
   }
 
   const savedPosts: Array<typeof blogPosts.$inferSelect> = [];

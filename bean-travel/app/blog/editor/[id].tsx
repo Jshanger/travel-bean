@@ -16,6 +16,23 @@ const ORANGE = '#F26A2E';
 const PAPER = '#FFF8EF';
 const CARD = '#FFFDF8';
 const BORDER = '#F1D7C5';
+const BLOG_PUBLISH_TIMEOUT_MS = 10000;
+
+function withPublishTimeout<T>(promise: Promise<T>) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Publishing is taking too long. Try again with fewer photos or a stronger connection.')), BLOG_PUBLISH_TIMEOUT_MS);
+    promise.then(
+      value => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
 
 export default function BlogEditorScreen() {
   const router = useRouter();
@@ -104,10 +121,10 @@ export default function BlogEditorScreen() {
     }
     async function publishCurrentDraft() {
       setPublishing(true);
-      setSaveNotice({ type: 'success', message: 'Preparing photos and publishing. Keep Travel Bean open for a moment.' });
+      setSaveNotice({ type: 'success', message: 'Optimizing photos and publishing. This should take about 10 seconds.' });
       try {
         await editBlogPost(draftToPublish.id, draftToPublish);
-        const published = await publishBlogPostById(draftToPublish.id, draftToPublish);
+        const published = await withPublishTimeout(publishBlogPostById(draftToPublish.id, draftToPublish));
         if (published) {
           setDraft(published);
           setSaveNotice({ type: 'success', message: 'Published. Your public Travel Bean Blog is updated.' });
@@ -340,7 +357,7 @@ export default function BlogEditorScreen() {
         ) : (
           <TouchableOpacity style={[styles.publishButton, isBusy && styles.stickyButtonDisabled]} onPress={publish} disabled={isBusy} activeOpacity={0.88}>
             <Feather name="globe" size={17} color="#fff" />
-            <Text style={styles.publishText}>{publishing ? 'Publishing photos...' : 'Publish to Travel Blog'}</Text>
+            <Text style={styles.publishText}>{publishing ? 'Publishing optimized photos...' : 'Publish to Travel Blog'}</Text>
           </TouchableOpacity>
         )}
         </View>
