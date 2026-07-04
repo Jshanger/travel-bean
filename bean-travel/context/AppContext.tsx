@@ -22,6 +22,7 @@ const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
 const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1600;
 const PUBLIC_BLOG_IMAGE_QUALITY = 0.72;
+const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-04-photo-upload-v2';
 const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 15000;
 const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 22000;
 
@@ -385,7 +386,7 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
             ),
           } as typeof photo & { imageData?: string };
         } catch (error) {
-          console.warn('Could not prepare blog photo for upload', error);
+          console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
           throw new Error('Could not prepare one of the blog photos for public upload. Try publishing with fewer photos, or re-add the photo and publish again.');
         }
       }
