@@ -16,23 +16,6 @@ const ORANGE = '#F26A2E';
 const PAPER = '#FFF8EF';
 const CARD = '#FFFDF8';
 const BORDER = '#F1D7C5';
-const BLOG_PUBLISH_TIMEOUT_MS = 60000;
-
-function withPublishTimeout<T>(promise: Promise<T>) {
-  return new Promise<T>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Publishing is taking longer than expected. Please keep Travel Bean open and try again on a stronger connection.')), BLOG_PUBLISH_TIMEOUT_MS);
-    promise.then(
-      value => {
-        clearTimeout(timeout);
-        resolve(value);
-      },
-      error => {
-        clearTimeout(timeout);
-        reject(error);
-      },
-    );
-  });
-}
 
 export default function BlogEditorScreen() {
   const router = useRouter();
@@ -121,10 +104,10 @@ export default function BlogEditorScreen() {
     }
     async function publishCurrentDraft() {
       setPublishing(true);
-      setSaveNotice({ type: 'success', message: 'Optimizing up to 4 photos and publishing. Please keep Travel Bean open.' });
+      setSaveNotice({ type: 'success', message: 'Optimizing up to 4 photos and publishing. Keep Travel Bean open until this finishes.' });
       try {
         await editBlogPost(draftToPublish.id, draftToPublish);
-        const published = await withPublishTimeout(publishBlogPostById(draftToPublish.id, draftToPublish));
+        const published = await publishBlogPostById(draftToPublish.id, draftToPublish);
         if (published) {
           setDraft(published);
           setSaveNotice({ type: 'success', message: 'Published. Your public Travel Bean Blog is updated.' });
