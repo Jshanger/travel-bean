@@ -75,6 +75,9 @@ export default function BlogEditorScreen() {
       await editBlogPost(draftToSave.id, draftToSave);
       setDraft(draftToSave);
       setSaveNotice({ type: 'success', message: 'Draft saved. Your changes are safe.' });
+      if (Platform.OS !== 'web') {
+        Alert.alert('Saved', 'Your blog draft has been saved.');
+      }
     } catch (error: any) {
       setSaveNotice({ type: 'error', message: error?.message ?? "Sorry, we couldn't save this draft. Please try again." });
     } finally {
@@ -104,7 +107,7 @@ export default function BlogEditorScreen() {
     }
     async function publishCurrentDraft() {
       setPublishing(true);
-      setSaveNotice({ type: 'success', message: 'Optimizing up to 4 photos and publishing. Keep Travel Bean open until this finishes.' });
+      setSaveNotice({ type: 'success', message: 'Publishing your prepared photos. Keep Travel Bean open until this finishes.' });
       try {
         await editBlogPost(draftToPublish.id, draftToPublish);
         const published = await publishBlogPostById(draftToPublish.id, draftToPublish);
@@ -186,6 +189,7 @@ export default function BlogEditorScreen() {
 
   function dismissKeyboard() {
     Keyboard.dismiss();
+    setSaveNotice({ type: 'success', message: 'Done writing. Tap Save or Publish when you are ready.' });
   }
 
   function refreshFromJournal() {

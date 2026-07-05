@@ -231,13 +231,13 @@ test('story prompt bank can rotate beyond the default questions', () => {
   assert.ok(nextPrompts.every(prompt => !STORY_PROMPTS.includes(prompt as typeof STORY_PROMPTS[number])));
 });
 
-test('all users can add up to eight photos per memory', () => {
+test('all users can add up to four photos per memory', () => {
   const createScreen = readFileSync(new URL('../app/(tabs)/create.tsx', import.meta.url), 'utf8');
   const addPlaceFlow = readFileSync(new URL('../components/AddPlaceBeanFlow.tsx', import.meta.url), 'utf8');
   const journalScreen = readFileSync(new URL('../app/(tabs)/journal.tsx', import.meta.url), 'utf8');
 
-  assert.equal(photoLimitForPremium(false), 8);
-  assert.equal(photoLimitForPremium(true), 8);
+  assert.equal(photoLimitForPremium(false), 4);
+  assert.equal(photoLimitForPremium(true), 4);
 
   assert.match(createScreen, /const photoLimit = photoLimitForPremium\(isPremium\)/);
   assert.match(createScreen, /const slotsLeft = photoLimit - photos\.length/);
@@ -263,6 +263,7 @@ test('picked Bean photos are persisted and editor forms stay keyboard-aware', ()
   const photoPersistence = readFileSync(new URL('../utils/photoPersistence.ts', import.meta.url), 'utf8');
 
   assert.match(photoPersistence, /expo-file-system\/legacy/);
+  assert.match(photoPersistence, /expo-image-manipulator/);
   assert.match(photoPersistence, /FileSystem\.documentDirectory/);
   assert.match(photoPersistence, /FileSystem\.copyAsync/);
 

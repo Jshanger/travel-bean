@@ -159,7 +159,7 @@ export default function AddPlaceBeanFlow({ visible, suggestions, initialCountry,
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: slotsLeft,
-      quality: 0.85,
+      quality: 0.78,
     });
     if (!result.canceled) {
       const existing = new Set(photos.flatMap(photo => [photo.assetId, photo.uri].filter(Boolean)));
@@ -218,6 +218,9 @@ export default function AddPlaceBeanFlow({ visible, suggestions, initialCountry,
       const beanPhotos: BeanPhoto[] = photos.map((asset, index) => ({
         id: asset.assetId ?? `${asset.uri}-${index}`,
         imageUrl: asset.uri,
+        originalFileName: asset.fileName ?? undefined,
+        uploadStatus: 'uploading',
+        order: index,
       }));
       const persistedPhotos = await persistBeanPhotos(beanPhotos);
       const created = await addPlace({ ...draft, photos: persistedPhotos });

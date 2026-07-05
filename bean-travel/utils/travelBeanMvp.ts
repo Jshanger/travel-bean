@@ -37,8 +37,8 @@ export type BeanLayout =
   | 'Dream Glow';
 export type BeanMood = 'Cozy' | 'Playful' | 'Dreamy' | 'Minimal';
 
-export const FREE_PHOTO_LIMIT = 8;
-export const PREMIUM_PHOTO_LIMIT = 8;
+export const FREE_PHOTO_LIMIT = 4;
+export const PREMIUM_PHOTO_LIMIT = 4;
 
 export function photoLimitForPremium(isPremium: boolean) {
   return isPremium ? PREMIUM_PHOTO_LIMIT : FREE_PHOTO_LIMIT;

@@ -38,6 +38,14 @@ export interface BeanPhoto {
   id: string;
   imageUrl: string;
   caption?: string;
+  originalFileName?: string;
+  compressedUrl?: string;
+  thumbnailUrl?: string;
+  blogImageUrl?: string;
+  width?: number;
+  height?: number;
+  uploadStatus?: 'uploading' | 'uploaded' | 'failed';
+  order?: number;
 }
 
 export interface PromptResponse {
@@ -65,6 +73,14 @@ export interface BlogPostPhoto {
   imageUrl: string;
   caption?: string;
   included: boolean;
+  originalFileName?: string;
+  compressedUrl?: string;
+  thumbnailUrl?: string;
+  blogImageUrl?: string;
+  width?: number;
+  height?: number;
+  uploadStatus?: 'uploading' | 'uploaded' | 'failed';
+  order?: number;
 }
 
 export interface BlogPost {

@@ -261,12 +261,15 @@ export default function CreateScreen() {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: slotsLeft,
-      quality: 0.86,
+      quality: 0.78,
     });
     if (result.canceled) return;
     const incoming = result.assets.map((asset, index) => ({
       id: asset.assetId ?? asset.uri ?? `${Date.now()}-${index}`,
       imageUrl: asset.uri,
+      originalFileName: asset.fileName ?? undefined,
+      uploadStatus: 'uploading' as const,
+      order: photos.length + index,
     }));
     setPhotos(prev => {
       const seen = new Set(prev.flatMap(photo => [photo.id, photo.imageUrl]));

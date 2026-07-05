@@ -20,9 +20,9 @@ const PREMIUM_STORAGE_KEY = 'travel-bean-premium-state';
 const GUEST_PLACES_STORAGE_KEY = 'travel-bean-guest-places';
 const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
-const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 640;
-const PUBLIC_BLOG_IMAGE_QUALITY = 0.42;
-const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-05-reliable-four-photo-upload-v5';
+const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1280;
+const PUBLIC_BLOG_IMAGE_QUALITY = 0.68;
+const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-05-create-time-jpeg-v1';
 const PUBLIC_BLOG_MAX_PUBLISH_PHOTOS = 4;
 const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 60000;
 const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 90000;
@@ -94,6 +94,14 @@ function mapPhoto(r: any): BeanPhoto | null {
     id: r.id,
     imageUrl,
     caption: r.caption ?? undefined,
+    originalFileName: r.originalFileName ?? r.original_file_name ?? undefined,
+    compressedUrl: r.compressedUrl ?? r.compressed_url ?? undefined,
+    thumbnailUrl: r.thumbnailUrl ?? r.thumbnail_url ?? undefined,
+    blogImageUrl: r.blogImageUrl ?? r.blog_image_url ?? undefined,
+    width: r.width ?? undefined,
+    height: r.height ?? undefined,
+    uploadStatus: r.uploadStatus ?? r.upload_status ?? undefined,
+    order: r.order ?? undefined,
   };
 }
 
@@ -378,19 +386,20 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
       ...candidatePhotos.filter(photo => photo.id !== coverPhoto?.id),
     ].slice(0, PUBLIC_BLOG_MAX_PUBLISH_PHOTOS);
     const photos = await Promise.all(publicPhotos.map(async photo => {
-      if (shouldUploadForPublicBlog(photo.imageUrl)) {
+      const uploadUri = photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl;
+      if (shouldUploadForPublicBlog(uploadUri)) {
         try {
           return {
             ...photo,
             imageData: await withTimeout(
-              photoDataUrl(photo.imageUrl, token),
+              photoDataUrl(uploadUri, token),
               PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
               'Preparing one of the blog photos took too long',
             ),
           } as typeof photo & { imageData?: string };
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
-          throw new Error('Could not prepare one of the blog photos for public upload. Try publishing with fewer photos, or re-add the photo and publish again.');
+          throw new Error('Could not prepare one of the blog photos for public upload. Re-add the photo and publish again.');
         }
       }
       return photo;
@@ -432,13 +441,35 @@ async function syncPlacePhotos(placeId: string, desired: BeanPhoto[], token: str
 
   const retained = existingRows
     .filter(row => desiredExistingIds.has(row.id))
-    .map(mapPhoto)
+    .map(row => {
+      const serverPhoto = mapPhoto(row);
+      const localPhoto = desired.find(item => item.id === row.id);
+      return serverPhoto && localPhoto ? {
+        ...serverPhoto,
+        blogImageUrl: localPhoto.blogImageUrl ?? serverPhoto.blogImageUrl,
+        compressedUrl: localPhoto.compressedUrl ?? serverPhoto.compressedUrl,
+        thumbnailUrl: localPhoto.thumbnailUrl ?? serverPhoto.thumbnailUrl,
+        width: localPhoto.width ?? serverPhoto.width,
+        height: localPhoto.height ?? serverPhoto.height,
+        uploadStatus: localPhoto.uploadStatus ?? serverPhoto.uploadStatus,
+        order: localPhoto.order ?? serverPhoto.order,
+      } : serverPhoto;
+    })
     .filter((photo): photo is BeanPhoto => Boolean(photo));
 
   const uploaded: BeanPhoto[] = [];
   for (const photo of desired.filter(item => !existingIds.has(item.id))) {
     const next = await uploadPlacePhoto(placeId, photo, token);
-    if (next) uploaded.push(next);
+    if (next) uploaded.push({
+      ...next,
+      blogImageUrl: photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl,
+      compressedUrl: photo.compressedUrl,
+      thumbnailUrl: photo.thumbnailUrl ?? photo.blogImageUrl ?? photo.compressedUrl,
+      width: photo.width,
+      height: photo.height,
+      uploadStatus: photo.uploadStatus ?? 'uploaded',
+      order: photo.order,
+    });
   }
   return [...retained, ...uploaded];
 }
@@ -962,7 +993,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         for (const photo of p.photos ?? []) {
           const uploaded = await uploadPlacePhoto(row.id, photo, token);
-          if (uploaded) photos.push(uploaded);
+          if (uploaded) photos.push({
+            ...uploaded,
+            blogImageUrl: photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl,
+            compressedUrl: photo.compressedUrl,
+            thumbnailUrl: photo.thumbnailUrl ?? photo.blogImageUrl ?? photo.compressedUrl,
+            width: photo.width,
+            height: photo.height,
+            uploadStatus: photo.uploadStatus ?? 'uploaded',
+            order: photo.order,
+          });
         }
       } catch (error) {
         await apiFetch(`/places/${row.id}`, token, { method: 'DELETE' }).catch(() => undefined);

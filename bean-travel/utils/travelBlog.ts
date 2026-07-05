@@ -133,6 +133,14 @@ function blogPhotos(bean: VisitedPlace): BlogPostPhoto[] {
       imageUrl: photo.imageUrl,
       caption: photo.caption,
       included: true,
+      originalFileName: photo.originalFileName,
+      compressedUrl: photo.compressedUrl,
+      thumbnailUrl: photo.thumbnailUrl,
+      blogImageUrl: photo.blogImageUrl,
+      width: photo.width,
+      height: photo.height,
+      uploadStatus: photo.uploadStatus,
+      order: photo.order,
     }));
 }
 

@@ -255,12 +255,15 @@ export default function JournalScreen() {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: slotsLeft,
-      quality: 0.86,
+      quality: 0.78,
     });
     if (result.canceled) return;
     const incoming = result.assets.slice(0, slotsLeft).map((asset, index) => ({
       id: asset.assetId ?? `${asset.uri}-${index}`,
       imageUrl: asset.uri,
+      originalFileName: asset.fileName ?? undefined,
+      uploadStatus: 'uploading' as const,
+      order: editForm.photos.length + index,
     }));
     const persistedIncoming = await persistBeanPhotos(incoming);
     setEditForm(prev => {
