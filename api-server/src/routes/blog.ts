@@ -7,6 +7,7 @@ import { loadObject, saveObject } from "../utils/storage";
 const router = Router();
 const MAX_PUBLIC_SYNC_IMAGE_BYTES = 15 * 1024 * 1024;
 const ACCOUNT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
+const ALLOWED_PUBLIC_SYNC_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 class PublicSyncUploadError extends Error {
   status: number;
@@ -165,6 +166,38 @@ function extForContentType(contentType: string) {
   return "jpg";
 }
 
+async function readRawImageBody(req: any) {
+  const contentType = String(req.headers["content-type"] ?? "image/jpeg").split(";")[0].trim().toLowerCase();
+  if (!ALLOWED_PUBLIC_SYNC_IMAGE_TYPES.has(contentType)) {
+    throw new PublicSyncUploadError(415, "Unsupported image type. Please choose a JPG, PNG, or WebP photo.");
+  }
+
+  const chunks: Buffer[] = [];
+  let size = 0;
+  let tooLarge = false;
+  await new Promise<void>((resolve, reject) => {
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_PUBLIC_SYNC_IMAGE_BYTES) {
+        tooLarge = true;
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", resolve);
+    req.on("error", reject);
+  });
+
+  if (tooLarge) {
+    throw new PublicSyncUploadError(413, "One of the blog photos is too large. Please choose a smaller image and publish again.");
+  }
+  const buffer = Buffer.concat(chunks);
+  if (!buffer.length) {
+    throw new PublicSyncUploadError(400, "Empty image upload. Please re-add the photo and try again.");
+  }
+  return { buffer, contentType };
+}
+
 function decodeDataImage(value: unknown) {
   if (typeof value !== "string") return null;
   const match = value.match(/^data:(image\/(?:jpe?g|png|webp));base64,([a-z0-9+/=\s]+)$/i);
@@ -266,6 +299,57 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
   return {
     ...cleanPhoto,
     imageUrl: publicImagePath(photoId),
+  };
+}
+
+async function savePublicSyncRawPhoto(
+  userId: string,
+  sourcePlaceId: string,
+  photoId: string,
+  caption: string,
+  upload: { buffer: Buffer; contentType: string },
+) {
+  if (upload.buffer.length > MAX_PUBLIC_SYNC_IMAGE_BYTES) {
+    throw new PublicSyncUploadError(413, "One of the blog photos is too large. Please choose a smaller image and publish again.");
+  }
+
+  const [existing] = await db.select().from(placePhotos).where(and(
+    eq(placePhotos.id, photoId),
+    eq(placePhotos.userId, userId),
+  ));
+
+  const currentStorageBytes = await storedPhotoBytesForUser(userId);
+  const replacingBytes = Number(existing?.byteSize ?? 0);
+  if (currentStorageBytes - replacingBytes + upload.buffer.length > ACCOUNT_STORAGE_LIMIT_BYTES) {
+    throw new PublicSyncUploadError(413, "Photo storage limit reached. You have used your 5GB optimized photo storage.");
+  }
+
+  const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
+  await saveObject(objectPath, upload.buffer, upload.contentType);
+
+  const values = {
+    userId,
+    placeId: sourcePlaceId || "blog-post",
+    objectPath,
+    byteSize: upload.buffer.length,
+    caption,
+  };
+
+  if (existing) {
+    await db.update(placePhotos)
+      .set(values)
+      .where(and(eq(placePhotos.id, photoId), eq(placePhotos.userId, userId)));
+  } else {
+    await db.insert(placePhotos).values({
+      id: photoId,
+      ...values,
+    });
+  }
+
+  return {
+    id: photoId,
+    imageUrl: publicImagePath(photoId),
+    caption,
   };
 }
 
@@ -459,6 +543,41 @@ router.get("/public/:username/:slug", async (req, res) => {
       ...publicBlogPhotos(post, { password: suppliedPassword }),
     },
   });
+});
+
+router.post("/public-sync/photo", async (req, res) => {
+  const username = sanitizeUsername(String(req.query.username ?? ""));
+  const sourcePlaceId = String(req.query.sourcePlaceId ?? "blog-post").slice(0, 120);
+  const photoId = String(req.query.photoId ?? "").slice(0, 160);
+  const caption = String(req.query.caption ?? "").slice(0, 500);
+
+  if (!username) {
+    res.status(400).json({ success: false, error: "Username is required" });
+    return;
+  }
+  if (!photoId) {
+    res.status(400).json({ success: false, error: "Photo id is required" });
+    return;
+  }
+  if (!canPublishLocalUsername(username)) {
+    res.status(403).json({ success: false, error: "This trial publish route is not enabled for that username" });
+    return;
+  }
+
+  const [taken] = await db.select().from(travelBlogSettings).where(eq(travelBlogSettings.username, username));
+  const userId = taken?.userId ?? localPublishUserId(username);
+
+  try {
+    const upload = await readRawImageBody(req);
+    req.log.info({ username, photoId, sourcePlaceId, bytes: upload.buffer.length, contentType: upload.contentType }, "[PHOTO_UPLOAD] public blog photo upload started");
+    const photo = await savePublicSyncRawPhoto(userId, sourcePlaceId, photoId, caption, upload);
+    req.log.info({ username, photoId, imageUrl: photo.imageUrl }, "[PHOTO_UPLOAD] public blog photo upload complete");
+    res.json({ success: true, photo });
+  } catch (err: any) {
+    req.log.error({ err, username, photoId, sourcePlaceId }, "[PHOTO_UPLOAD_ERROR] public blog photo upload failed");
+    const status = err instanceof PublicSyncUploadError ? err.status : 500;
+    res.status(status).json({ success: false, error: err?.message ?? "Could not upload blog photo" });
+  }
 });
 
 router.post("/public-sync", async (req, res) => {

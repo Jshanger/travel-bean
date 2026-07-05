@@ -26,6 +26,7 @@ const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-05-create-time-jpeg-v1';
 const PUBLIC_BLOG_MAX_PUBLISH_PHOTOS = 4;
 const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 60000;
 const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 90000;
+const PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS = 120000;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -222,6 +223,11 @@ function shouldUploadForPublicBlog(uri: string | undefined) {
   return true;
 }
 
+function publicUploadPhotoId(photoId: string) {
+  const clean = photoId.replace(/[^a-z0-9_-]/gi, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
+  return clean.startsWith('public-') ? clean : `public-${clean || uid()}`;
+}
+
 async function blobToDataUrl(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -374,7 +380,98 @@ async function photoDataUrl(uri: string, token?: string | null) {
   return blobToDataUrl(blob);
 }
 
-async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string | null) {
+async function uploadPublicBlogPhotoForSync(
+  settings: TravelBlogSettings,
+  post: BlogPost,
+  photo: BlogPost['photos'][number],
+  uploadUri: string,
+  token?: string | null,
+) {
+  const username = settings.username?.trim();
+  if (!username) throw new Error('Choose a blog username before publishing.');
+  const publicPhotoId = publicUploadPhotoId(photo.id);
+  console.log('[PHOTO_UPLOAD]', 'public blog upload starting', {
+    postId: post.id,
+    photoId: photo.id,
+    publicPhotoId,
+    uriKind: isPrivateBeanPhotoUrl(uploadUri) ? 'private-bean' : uploadUri.split(':')[0],
+  });
+
+  try {
+    const query = new URLSearchParams({
+      username,
+      sourcePlaceId: post.sourcePlaceId || post.id,
+      photoId: publicPhotoId,
+      caption: photo.caption ?? '',
+    });
+    const uploadUrl = `${getApiRoot()}/blog/public-sync/photo?${query.toString()}`;
+    const contentType = photoContentType(uploadUri);
+    let payload: any;
+    if (Platform.OS !== 'web' && /^file:\/\//i.test(uploadUri)) {
+      const nativeUpload = await withTimeout(
+        FileSystem.uploadAsync(uploadUrl, uploadUri, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+          headers: { 'Content-Type': contentType },
+        }),
+        PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
+        'Uploading one of the blog photos took too long',
+      );
+      payload = JSON.parse(nativeUpload.body || '{}');
+      if (nativeUpload.status < 200 || nativeUpload.status >= 300) {
+        throw new Error(payload?.error ?? `Photo upload failed (${nativeUpload.status})`);
+      }
+    } else {
+      const blob = await withTimeout(
+        readPhotoBlob(uploadUri, token),
+        PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS,
+        'Reading one of the blog photos took too long',
+      );
+      const response = await withTimeout(
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': contentType,
+          },
+          body: blob,
+        }),
+        PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
+        'Uploading one of the blog photos took too long',
+      );
+      payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Photo upload failed (${response.status})`);
+      }
+    }
+    if (!payload?.success || !payload?.photo?.imageUrl) {
+      throw new Error(payload?.error ?? 'Photo upload failed');
+    }
+    console.log('[PHOTO_UPLOAD]', 'public blog upload complete', {
+      postId: post.id,
+      photoId: photo.id,
+      publicPhotoId,
+      imageUrl: payload.photo.imageUrl,
+    });
+    return {
+      ...photo,
+      id: payload.photo.id ?? publicPhotoId,
+      imageUrl: payload.photo.imageUrl,
+      compressedUrl: payload.photo.imageUrl,
+      thumbnailUrl: payload.photo.imageUrl,
+      blogImageUrl: payload.photo.imageUrl,
+      uploadStatus: 'uploaded' as const,
+    };
+  } catch (error) {
+    console.error('[PHOTO_UPLOAD_ERROR]', error, {
+      postId: post.id,
+      photoId: photo.id,
+      publicPhotoId,
+    });
+    throw error;
+  }
+}
+
+async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts: BlogPost[], token?: string | null) {
   const prepared: BlogPost[] = [];
   for (const post of posts) {
     const candidatePhotos = post.photos
@@ -385,29 +482,29 @@ async function prepareBlogPostsForPublicSync(posts: BlogPost[], token?: string |
       ...(coverPhoto ? [coverPhoto] : []),
       ...candidatePhotos.filter(photo => photo.id !== coverPhoto?.id),
     ].slice(0, PUBLIC_BLOG_MAX_PUBLISH_PHOTOS);
-    const photos = await Promise.all(publicPhotos.map(async photo => {
+    const photos: BlogPost['photos'] = [];
+    const originalToPublicId = new Map<string, string>();
+    for (const photo of publicPhotos) {
       const uploadUri = photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl;
       if (shouldUploadForPublicBlog(uploadUri)) {
         try {
-          return {
-            ...photo,
-            imageData: await withTimeout(
-              photoDataUrl(uploadUri, token),
-              PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
-              'Preparing one of the blog photos took too long',
-            ),
-          } as typeof photo & { imageData?: string };
+          const uploaded = await uploadPublicBlogPhotoForSync(settings, post, photo, uploadUri, token);
+          originalToPublicId.set(photo.id, uploaded.id);
+          photos.push(uploaded);
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
-          throw new Error('Could not prepare one of the blog photos for public upload. Re-add the photo and publish again.');
+          throw new Error('Could not upload one of the blog photos. Re-add the photo and publish again.');
         }
+      } else {
+        photos.push(photo);
       }
-      return photo;
-    }));
-    const syncedCoverPhoto = photos.find(photo => photo.id === post.coverPhotoId);
+    }
+    const publicCoverPhotoId = post.coverPhotoId ? (originalToPublicId.get(post.coverPhotoId) ?? post.coverPhotoId) : undefined;
+    const syncedCoverPhoto = photos.find(photo => photo.id === publicCoverPhotoId) ?? photos[0];
     prepared.push({
       ...post,
       photos,
+      coverPhotoId: syncedCoverPhoto?.id ?? publicCoverPhotoId ?? post.coverPhotoId,
       coverImageUrl: syncedCoverPhoto?.imageUrl ?? post.coverImageUrl,
     } as BlogPost);
   }
@@ -579,7 +676,7 @@ function parseStoredBlogPosts(value: string | null): BlogPost[] {
 }
 
 async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: BlogPost[], token?: string | null): Promise<{ settings: TravelBlogSettings; posts: BlogPost[] }> {
-  const syncPosts = await prepareBlogPostsForPublicSync(posts, token);
+  const syncPosts = await prepareBlogPostsForPublicSync(settings, posts, token);
   const response = await blogApiFetch('/public-sync', null, {
     method: 'POST',
     body: JSON.stringify({
@@ -612,7 +709,7 @@ async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: Blo
 }
 
 async function publishLocalBlogPost(settings: TravelBlogSettings, post: BlogPost, token?: string | null): Promise<{ settings: TravelBlogSettings; post: BlogPost }> {
-  const [syncPost] = await prepareBlogPostsForPublicSync([post], token);
+  const [syncPost] = await prepareBlogPostsForPublicSync(settings, [post], token);
   const response = await blogApiFetch('/public-sync', null, {
     method: 'POST',
     body: JSON.stringify({
