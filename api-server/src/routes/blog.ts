@@ -6,6 +6,7 @@ import { isR2Configured, loadObject, saveObject } from "../utils/storage";
 
 const router = Router();
 const MAX_PUBLIC_SYNC_IMAGE_BYTES = 15 * 1024 * 1024;
+const MAX_INLINE_PUBLIC_IMAGE_BYTES = 1.25 * 1024 * 1024;
 const ACCOUNT_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024 * 1024;
 const ALLOWED_PUBLIC_SYNC_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -166,12 +167,26 @@ function extForContentType(contentType: string) {
   return "jpg";
 }
 
+function isPublicPhotoStorageConfigured() {
+  return Boolean(process.env.PRIVATE_OBJECT_DIR || isR2Configured());
+}
+
 function ensurePublicPhotoStorageConfigured() {
-  if (process.env.PRIVATE_OBJECT_DIR || isR2Configured()) return;
+  if (isPublicPhotoStorageConfigured()) return;
   throw new PublicSyncUploadError(
     503,
     "Object storage is not configured. Set R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ACCOUNT_ID or R2_ENDPOINT in Railway before publishing blog photos.",
   );
+}
+
+function inlinePublicImageUrl(upload: { buffer: Buffer; contentType: string }) {
+  if (upload.buffer.length > MAX_INLINE_PUBLIC_IMAGE_BYTES) {
+    throw new PublicSyncUploadError(
+      503,
+      "Object storage is not configured and this photo is too large for the temporary inline publish path. Please set the R2_* variables in Railway.",
+    );
+  }
+  return `data:${upload.contentType};base64,${upload.buffer.toString("base64")}`;
 }
 
 async function readRawImageBody(req: any) {
@@ -279,6 +294,13 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
     throw new PublicSyncUploadError(413, "Photo storage limit reached. You have used your 5GB optimized photo storage.");
   }
 
+  if (!isPublicPhotoStorageConfigured()) {
+    return {
+      ...cleanPhoto,
+      imageUrl: inlinePublicImageUrl(upload),
+    };
+  }
+
   const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
   ensurePublicPhotoStorageConfigured();
   await saveObject(objectPath, upload.buffer, upload.contentType);
@@ -331,6 +353,14 @@ async function savePublicSyncRawPhoto(
   const replacingBytes = Number(existing?.byteSize ?? 0);
   if (currentStorageBytes - replacingBytes + upload.buffer.length > ACCOUNT_STORAGE_LIMIT_BYTES) {
     throw new PublicSyncUploadError(413, "Photo storage limit reached. You have used your 5GB optimized photo storage.");
+  }
+
+  if (!isPublicPhotoStorageConfigured()) {
+    return {
+      id: photoId,
+      imageUrl: inlinePublicImageUrl(upload),
+      caption,
+    };
   }
 
   const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
