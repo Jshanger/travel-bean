@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, blogPosts, placePhotos, travelBlogSettings, userSubscriptions } from "@workspace/db";
 import { and, eq, notInArray, sql } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { loadObject, saveObject } from "../utils/storage";
+import { isR2Configured, loadObject, saveObject } from "../utils/storage";
 
 const router = Router();
 const MAX_PUBLIC_SYNC_IMAGE_BYTES = 15 * 1024 * 1024;
@@ -166,6 +166,14 @@ function extForContentType(contentType: string) {
   return "jpg";
 }
 
+function ensurePublicPhotoStorageConfigured() {
+  if (process.env.PRIVATE_OBJECT_DIR || isR2Configured()) return;
+  throw new PublicSyncUploadError(
+    503,
+    "Object storage is not configured. Set R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ACCOUNT_ID or R2_ENDPOINT in Railway before publishing blog photos.",
+  );
+}
+
 async function readRawImageBody(req: any) {
   const contentType = String(req.headers["content-type"] ?? "image/jpeg").split(";")[0].trim().toLowerCase();
   if (!ALLOWED_PUBLIC_SYNC_IMAGE_TYPES.has(contentType)) {
@@ -272,6 +280,7 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
   }
 
   const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
+  ensurePublicPhotoStorageConfigured();
   await saveObject(objectPath, upload.buffer, upload.contentType);
 
   const values = {
@@ -325,6 +334,7 @@ async function savePublicSyncRawPhoto(
   }
 
   const objectPath = `/objects/blog/${safeObjectSegment(userId)}/${safeObjectSegment(sourcePlaceId || "post")}/${safeObjectSegment(photoId)}.${extForContentType(upload.contentType)}`;
+  ensurePublicPhotoStorageConfigured();
   await saveObject(objectPath, upload.buffer, upload.contentType);
 
   const values = {
