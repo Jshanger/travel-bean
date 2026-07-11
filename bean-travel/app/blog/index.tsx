@@ -64,7 +64,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
   const [sharePayload, setSharePayload] = useState<SocialSharePayload | null>(null);
   const { isSignedIn } = useTravelAuth();
   const { user } = useTravelUser();
-  const { blogSettings, blogPosts, places, userProfile, isPremium, createBlogDraftFromPlace, emailDashboardLink, syncBlogToCloud } = useApp();
+  const { blogSettings, blogPosts, places, userProfile, isPremium, createBlogDraftFromPlace, deleteBlogPost, emailDashboardLink, syncBlogToCloud } = useApp();
   const publishedPosts = useMemo(() => blogPosts.filter(post => post.status === 'published'), [blogPosts]);
   const draftPosts = useMemo(() => blogPosts.filter(post => post.status === 'draft'), [blogPosts]);
   const blogUrl = publicBlogUrl(blogSettings);
@@ -178,6 +178,23 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
     }
   }
 
+  function confirmDeleteDraft(post: BlogPost) {
+    Alert.alert('Delete draft?', 'This removes the draft blog post. Your original Bean stays in your journal.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteBlogPost(post.id);
+          } catch (error: any) {
+            Alert.alert('Could not delete draft', error?.message ?? 'Please try again.');
+          }
+        },
+      },
+    ]);
+  }
+
   if (requireSignedIn && !isSignedIn) {
     return <WebDashboardSignInGate onSignIn={goSignIn} onBack={() => router.replace('/blog' as any)} />;
   }
@@ -270,6 +287,7 @@ export default function BlogDashboard({ requireSignedIn = false }: BlogDashboard
         empty="Drafts you create from Beans will appear here."
         posts={draftPosts}
         onEdit={post => router.push({ pathname: '/blog/editor/[id]', params: { id: post.id } } as any)}
+        onDelete={confirmDeleteDraft}
       />
 
       <BlogSection
@@ -379,6 +397,7 @@ function BlogSection({
   empty,
   posts,
   onEdit,
+  onDelete,
   onView,
   onShare,
 }: {
@@ -386,6 +405,7 @@ function BlogSection({
   empty: string;
   posts: BlogPost[];
   onEdit: (post: BlogPost) => void;
+  onDelete?: (post: BlogPost) => void;
   onView?: (post: BlogPost) => void;
   onShare?: (post: BlogPost) => void;
 }) {
@@ -408,6 +428,12 @@ function BlogSection({
                 <Feather name="edit-3" size={14} color={ORANGE} />
                 <Text style={styles.postButtonText}>Edit</Text>
               </TouchableOpacity>
+              {onDelete ? (
+                <TouchableOpacity style={styles.postButtonDanger} onPress={() => onDelete(post)} activeOpacity={0.86}>
+                  <Feather name="trash-2" size={14} color="#B43324" />
+                  <Text style={styles.postButtonDangerText}>Delete</Text>
+                </TouchableOpacity>
+              ) : null}
               {onView ? (
                 <TouchableOpacity style={styles.postButton} onPress={() => onView(post)} activeOpacity={0.86}>
                   <Feather name="external-link" size={14} color={ORANGE} />
@@ -544,6 +570,8 @@ const styles = StyleSheet.create({
   postActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   postButton: { minHeight: 34, borderRadius: 17, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
   postButtonText: { color: ORANGE, fontSize: 12, fontFamily: 'Inter_700Bold' },
+  postButtonDanger: { minHeight: 34, borderRadius: 17, borderWidth: 1, borderColor: '#F0B5A8', backgroundColor: '#FFF1E6', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  postButtonDangerText: { color: '#B43324', fontSize: 12, fontFamily: 'Inter_700Bold' },
   postButtonPrimary: { minHeight: 34, borderRadius: 17, backgroundColor: ORANGE, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 6 },
   postButtonPrimaryText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_700Bold' },
   emptyCard: { borderRadius: 20, borderWidth: 1, borderColor: BORDER, backgroundColor: CARD, padding: 18 },

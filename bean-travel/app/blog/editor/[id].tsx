@@ -21,7 +21,7 @@ export default function BlogEditorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string }>();
-  const { places, blogSettings, blogPosts, isPremium, getBlogPostById, editBlogPost, publishBlogPostById, unpublishBlogPost } = useApp();
+  const { places, blogSettings, blogPosts, isPremium, getBlogPostById, editBlogPost, publishBlogPostById, unpublishBlogPost, deleteBlogPost } = useApp();
   const post = params.id ? getBlogPostById(String(params.id)) : undefined;
   const [draft, setDraft] = useState<BlogPost | undefined>(post);
   const [saving, setSaving] = useState(false);
@@ -140,6 +140,29 @@ export default function BlogEditorScreen() {
     if (!draft) return;
     await unpublishBlogPost(draft.id);
     setDraft({ ...draft, status: 'draft', privacy: 'private', publishedAt: null });
+  }
+
+  function confirmDeleteDraft() {
+    if (!draft || draft.status === 'published' || isBusy) return;
+    Alert.alert('Delete draft?', 'This removes the draft blog post. Your original Bean stays in your journal.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setSaving(true);
+          setSaveNotice(null);
+          try {
+            await deleteBlogPost(draft.id);
+            router.replace('/blog' as any);
+          } catch (error: any) {
+            setSaveNotice({ type: 'error', message: error?.message ?? "Sorry, we couldn't delete this draft. Please try again." });
+          } finally {
+            setSaving(false);
+          }
+        },
+      },
+    ]);
   }
 
   function setPrivacy(privacy: BlogPrivacy) {
@@ -342,10 +365,16 @@ export default function BlogEditorScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={[styles.publishButton, isBusy && styles.stickyButtonDisabled]} onPress={publish} disabled={isBusy} activeOpacity={0.88}>
-            <Feather name="globe" size={17} color="#fff" />
-            <Text style={styles.publishText}>{publishing ? 'Publishing optimized photos...' : 'Publish to Travel Blog'}</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity style={[styles.publishButton, isBusy && styles.stickyButtonDisabled]} onPress={publish} disabled={isBusy} activeOpacity={0.88}>
+              <Feather name="globe" size={17} color="#fff" />
+              <Text style={styles.publishText}>{publishing ? 'Publishing optimized photos...' : 'Publish to Travel Blog'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.deleteDraftButton, isBusy && styles.stickyButtonDisabled]} onPress={confirmDeleteDraft} disabled={isBusy} activeOpacity={0.86}>
+              <Feather name="trash-2" size={16} color="#B43324" />
+              <Text style={styles.deleteDraftText}>Delete Draft</Text>
+            </TouchableOpacity>
+          </>
         )}
         </View>
       </ScrollView>
@@ -423,6 +452,8 @@ const styles = StyleSheet.create({
   saveNoticeTextError: { color: '#B83224' },
   publishButton: { marginTop: 10, minHeight: 52, borderRadius: 26, backgroundColor: '#153A46', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   publishText: { color: '#fff', fontSize: 15, fontFamily: 'Inter_700Bold' },
+  deleteDraftButton: { marginTop: 10, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: '#F0B5A8', backgroundColor: '#FFF1E6', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  deleteDraftText: { color: '#B43324', fontSize: 13, fontFamily: 'Inter_700Bold' },
   buttonRow: { flexDirection: Platform.OS === 'web' ? 'row' : 'column', gap: 10, marginTop: 10 },
   secondaryButton: { flex: 1, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: BORDER, backgroundColor: PAPER, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, paddingHorizontal: 14 },
   secondaryButtonText: { color: ORANGE, fontSize: 13, fontFamily: 'Inter_700Bold' },
