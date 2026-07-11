@@ -218,7 +218,7 @@ async function readPhotoBlob(uri: string, token?: string | null) {
 function shouldUploadForPublicBlog(uri: string | undefined) {
   if (!uri) return false;
   if (isPublicBlogPhotoUrl(uri)) return false;
-  if (isPrivateBeanPhotoUrl(uri)) return true;
+  if (isPrivateBeanPhotoUrl(uri)) return false;
   if (/^https?:\/\//i.test(uri)) return false;
   return true;
 }
@@ -226,6 +226,25 @@ function shouldUploadForPublicBlog(uri: string | undefined) {
 function publicUploadPhotoId(photoId: string) {
   const clean = photoId.replace(/[^a-z0-9_-]/gi, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
   return clean.startsWith('public-') ? clean : `public-${clean || uid()}`;
+}
+
+function cleanPhotoForPublicSync(photo: BlogPost['photos'][number]): BlogPost['photos'][number] {
+  const imageUrl = photo.imageUrl;
+  const thumbnailUrl = isPublicBlogPhotoUrl(photo.thumbnailUrl) || /^https?:\/\//i.test(photo.thumbnailUrl ?? '')
+    ? photo.thumbnailUrl
+    : undefined;
+  return {
+    id: photo.id,
+    imageUrl,
+    caption: photo.caption,
+    included: photo.included !== false,
+    originalFileName: photo.originalFileName,
+    thumbnailUrl,
+    width: photo.width,
+    height: photo.height,
+    uploadStatus: 'uploaded',
+    order: photo.order,
+  };
 }
 
 async function blobToDataUrl(blob: Blob) {
@@ -490,13 +509,13 @@ async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts
         try {
           const uploaded = await uploadPublicBlogPhotoForSync(settings, post, photo, uploadUri, token);
           originalToPublicId.set(photo.id, uploaded.id);
-          photos.push(uploaded);
+          photos.push(cleanPhotoForPublicSync(uploaded));
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
           throw new Error('Could not upload one of the blog photos. Re-add the photo and publish again.');
         }
       } else {
-        photos.push(photo);
+        photos.push(cleanPhotoForPublicSync(photo));
       }
     }
     const publicCoverPhotoId = post.coverPhotoId ? (originalToPublicId.get(post.coverPhotoId) ?? post.coverPhotoId) : undefined;
@@ -696,9 +715,9 @@ async function publishLocalBlogSnapshot(settings: TravelBlogSettings, posts: Blo
       if (!local) return synced;
       return {
         ...synced,
-        coverPhotoId: local.coverPhotoId ?? synced.coverPhotoId,
-        coverImageUrl: local.coverImageUrl ?? synced.coverImageUrl,
-        photos: local.photos,
+        coverPhotoId: synced.coverPhotoId ?? local.coverPhotoId,
+        coverImageUrl: synced.coverImageUrl ?? local.coverImageUrl,
+        photos: synced.photos?.length ? synced.photos : local.photos.map(cleanPhotoForPublicSync),
       };
     })
     : posts;
@@ -727,9 +746,9 @@ async function publishLocalBlogPost(settings: TravelBlogSettings, post: BlogPost
     settings: savedSettings,
     post: {
       ...syncedPost,
-      coverPhotoId: post.coverPhotoId ?? syncedPost.coverPhotoId,
-      coverImageUrl: post.coverImageUrl ?? syncedPost.coverImageUrl,
-      photos: post.photos,
+      coverPhotoId: syncedPost.coverPhotoId ?? post.coverPhotoId,
+      coverImageUrl: syncedPost.coverImageUrl ?? post.coverImageUrl,
+      photos: syncedPost.photos?.length ? syncedPost.photos : post.photos.map(cleanPhotoForPublicSync),
     },
   };
 }
