@@ -228,6 +228,10 @@ function publicUploadPhotoId(photoId: string) {
   return clean.startsWith('public-') ? clean : `public-${clean || uid()}`;
 }
 
+function publicBlogImagePath(photoId: string) {
+  return `/api/blog/public/images/${encodeURIComponent(photoId)}`;
+}
+
 function cleanPhotoForPublicSync(photo: BlogPost['photos'][number]): BlogPost['photos'][number] {
   const imageUrl = photo.imageUrl;
   const thumbnailUrl = isPublicBlogPhotoUrl(photo.thumbnailUrl) || /^https?:\/\//i.test(photo.thumbnailUrl ?? '')
@@ -490,6 +494,37 @@ async function uploadPublicBlogPhotoForSync(
   }
 }
 
+async function embedPublicBlogPhotoForSync(
+  post: BlogPost,
+  photo: BlogPost['photos'][number],
+  uploadUri: string,
+  token?: string | null,
+) {
+  const publicPhotoId = publicUploadPhotoId(photo.id);
+  console.log('[PHOTO_UPLOAD]', 'embedding compressed public blog photo', {
+    postId: post.id,
+    photoId: photo.id,
+    publicPhotoId,
+  });
+  const imageData = await withTimeout(
+    photoDataUrl(uploadUri, token),
+    PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
+    'Preparing one of the blog photos took too long',
+  );
+  return {
+    ...cleanPhotoForPublicSync({
+      ...photo,
+      id: publicPhotoId,
+      imageUrl: publicBlogImagePath(publicPhotoId),
+      compressedUrl: publicBlogImagePath(publicPhotoId),
+      thumbnailUrl: publicBlogImagePath(publicPhotoId),
+      blogImageUrl: publicBlogImagePath(publicPhotoId),
+      uploadStatus: 'uploaded',
+    }),
+    imageData,
+  } as BlogPost['photos'][number] & { imageData: string };
+}
+
 async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts: BlogPost[], token?: string | null) {
   const prepared: BlogPost[] = [];
   for (const post of posts) {
@@ -507,12 +542,12 @@ async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts
       const uploadUri = photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl;
       if (shouldUploadForPublicBlog(uploadUri)) {
         try {
-          const uploaded = await uploadPublicBlogPhotoForSync(settings, post, photo, uploadUri, token);
+          const uploaded = await embedPublicBlogPhotoForSync(post, photo, uploadUri, token);
           originalToPublicId.set(photo.id, uploaded.id);
-          photos.push(cleanPhotoForPublicSync(uploaded));
+          photos.push(uploaded);
         } catch (error) {
           console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
-          throw new Error('Could not upload one of the blog photos. Re-add the photo and publish again.');
+          throw new Error('Could not prepare one of the blog photos. Re-add the photo and publish again.');
         }
       } else {
         photos.push(cleanPhotoForPublicSync(photo));

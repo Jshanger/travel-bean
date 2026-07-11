@@ -278,8 +278,11 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
     eq(placePhotos.id, photoId),
     eq(placePhotos.userId, userId),
   ));
+  const [existingAnyOwner] = existing
+    ? [existing]
+    : await db.select().from(placePhotos).where(eq(placePhotos.id, photoId));
   if (!upload) {
-    if (existing) return { ...cleanPhoto, imageUrl: publicImagePath(photoId) };
+    if (existingAnyOwner) return { ...cleanPhoto, imageUrl: publicImagePath(photoId) };
     if (isReusablePublicImageUrl(cleanPhoto.imageUrl)) return cleanPhoto;
     throw new PublicSyncUploadError(400, "Could not publish one of the blog photos. Please re-add the photo and publish again.");
   }
@@ -323,6 +326,17 @@ async function savePublicSyncPhoto(userId: string, sourcePlaceId: string, photo:
         caption: values.caption,
       })
       .where(eq(placePhotos.id, photoId));
+  } else if (existingAnyOwner) {
+    const copyId = `${photoId}-${safeObjectSegment(userId).slice(0, 24)}`;
+    await db.insert(placePhotos).values({
+      ...values,
+      id: copyId,
+    });
+    return {
+      ...cleanPhoto,
+      id: copyId,
+      imageUrl: publicImagePath(copyId),
+    };
   } else {
     await db.insert(placePhotos).values(values);
   }
@@ -511,12 +525,15 @@ router.get("/public/images/:photoId", async (req, res) => {
     eq(placePhotos.id, photoId),
     eq(placePhotos.userId, userId),
   ));
-  if (!row) {
+  const [fallbackRow] = row
+    ? [row]
+    : await db.select().from(placePhotos).where(eq(placePhotos.id, photoId));
+  if (!fallbackRow) {
     res.status(404).json({ error: "Not found" });
     return;
   }
   try {
-    const { contentType, stream } = await loadObject(row.objectPath);
+    const { contentType, stream } = await loadObject(fallbackRow.objectPath);
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     stream.pipe(res);
