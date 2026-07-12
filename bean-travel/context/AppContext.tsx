@@ -218,7 +218,7 @@ async function readPhotoBlob(uri: string, token?: string | null) {
 function shouldUploadForPublicBlog(uri: string | undefined) {
   if (!uri) return false;
   if (isPublicBlogPhotoUrl(uri)) return false;
-  if (isPrivateBeanPhotoUrl(uri)) return false;
+  if (isPrivateBeanPhotoUrl(uri)) return true;
   if (/^https?:\/\//i.test(uri)) return false;
   return true;
 }
