@@ -359,6 +359,42 @@ async function optimizedNativePhotoDataUrl(uri: string, token?: string | null) {
   }
 }
 
+async function optimizedNativePhotoFile(uri: string, token?: string | null) {
+  let sourceUri = uri;
+  let tempUri: string | null = null;
+  try {
+    if (!/^file:\/\//i.test(uri) && !/^data:image\//i.test(uri)) {
+      tempUri = await writeTempPhotoForOptimization(uri, token);
+      sourceUri = tempUri;
+    }
+    const result = await ImageManipulator.manipulateAsync(
+      sourceUri,
+      [{ resize: { width: PUBLIC_BLOG_IMAGE_MAX_WIDTH } }],
+      {
+        compress: PUBLIC_BLOG_IMAGE_QUALITY,
+        format: ImageManipulator.SaveFormat.JPEG,
+      },
+    );
+    return {
+      uri: result.uri,
+      contentType: 'image/jpeg',
+      cleanup: async () => {
+        if (result.uri && result.uri !== uri) {
+          await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => undefined);
+        }
+        if (tempUri) {
+          await FileSystem.deleteAsync(tempUri, { idempotent: true }).catch(() => undefined);
+        }
+      },
+    };
+  } catch (error) {
+    if (tempUri) {
+      FileSystem.deleteAsync(tempUri, { idempotent: true }).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
 async function photoDataUrl(uri: string, token?: string | null) {
   if (Platform.OS !== 'web') {
     try {
@@ -430,16 +466,21 @@ async function uploadPublicBlogPhotoForSync(
     const uploadUrl = `${getApiRoot()}/blog/public-sync/photo?${query.toString()}`;
     const contentType = photoContentType(uploadUri);
     let payload: any;
-    if (Platform.OS !== 'web' && /^file:\/\//i.test(uploadUri)) {
+    if (Platform.OS !== 'web') {
+      const optimized = await withTimeout(
+        optimizedNativePhotoFile(uploadUri, token),
+        PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
+        'Preparing one of the blog photos took too long',
+      );
       const nativeUpload = await withTimeout(
-        FileSystem.uploadAsync(uploadUrl, uploadUri, {
+        FileSystem.uploadAsync(uploadUrl, optimized.uri, {
           httpMethod: 'POST',
           uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-          headers: { 'Content-Type': contentType },
+          headers: { 'Content-Type': optimized.contentType },
         }),
         PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
         'Uploading one of the blog photos took too long',
-      );
+      ).finally(() => optimized.cleanup());
       payload = JSON.parse(nativeUpload.body || '{}');
       if (nativeUpload.status < 200 || nativeUpload.status >= 300) {
         throw new Error(payload?.error ?? `Photo upload failed (${nativeUpload.status})`);
@@ -542,7 +583,7 @@ async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts
       const uploadUri = photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl;
       if (shouldUploadForPublicBlog(uploadUri)) {
         try {
-          const uploaded = await embedPublicBlogPhotoForSync(post, photo, uploadUri, token);
+          const uploaded = await uploadPublicBlogPhotoForSync(settings, post, photo, uploadUri, token);
           originalToPublicId.set(photo.id, uploaded.id);
           photos.push(uploaded);
         } catch (error) {
