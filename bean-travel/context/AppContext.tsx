@@ -467,23 +467,26 @@ async function uploadPublicBlogPhotoForSync(
     const contentType = photoContentType(uploadUri);
     let payload: any;
     if (Platform.OS !== 'web') {
-      const optimized = await withTimeout(
-        optimizedNativePhotoFile(uploadUri, token),
+      const optimizedDataUrl = await withTimeout(
+        optimizedNativePhotoDataUrl(uploadUri, token),
         PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
         'Preparing one of the blog photos took too long',
       );
-      const nativeUpload = await withTimeout(
-        FileSystem.uploadAsync(uploadUrl, optimized.uri, {
-          httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-          headers: { 'Content-Type': optimized.contentType },
+      const optimizedBlob = await dataUrlToBlob(optimizedDataUrl);
+      const response = await withTimeout(
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'image/jpeg',
+          },
+          body: optimizedBlob,
         }),
         PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
         'Uploading one of the blog photos took too long',
-      ).finally(() => optimized.cleanup());
-      payload = JSON.parse(nativeUpload.body || '{}');
-      if (nativeUpload.status < 200 || nativeUpload.status >= 300) {
-        throw new Error(payload?.error ?? `Photo upload failed (${nativeUpload.status})`);
+      );
+      payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? `Photo upload failed (${response.status})`);
       }
     } else {
       const blob = await withTimeout(
