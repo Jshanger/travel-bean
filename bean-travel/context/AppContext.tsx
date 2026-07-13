@@ -22,11 +22,10 @@ const BLOG_SETTINGS_STORAGE_KEY = 'travel-bean-blog-settings';
 const BLOG_POSTS_STORAGE_KEY = 'travel-bean-blog-posts';
 const PUBLIC_BLOG_IMAGE_MAX_WIDTH = 1280;
 const PUBLIC_BLOG_IMAGE_QUALITY = 0.68;
-const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-05-create-time-jpeg-v1';
+const PUBLIC_BLOG_IMAGE_PIPELINE_VERSION = '2026-07-13-inline-sync-jpeg-v2';
 const PUBLIC_BLOG_MAX_PUBLISH_PHOTOS = 4;
 const PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS = 60000;
 const PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS = 90000;
-const PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS = 120000;
 
 export const BLOG_PUBLISHING_PREMIUM_ERROR = 'BLOG_PUBLISHING_PREMIUM_REQUIRED';
 
@@ -439,105 +438,6 @@ async function photoDataUrl(uri: string, token?: string | null) {
   return blobToDataUrl(blob);
 }
 
-async function uploadPublicBlogPhotoForSync(
-  settings: TravelBlogSettings,
-  post: BlogPost,
-  photo: BlogPost['photos'][number],
-  uploadUri: string,
-  token?: string | null,
-) {
-  const username = settings.username?.trim();
-  if (!username) throw new Error('Choose a blog username before publishing.');
-  const publicPhotoId = publicUploadPhotoId(photo.id);
-  console.log('[PHOTO_UPLOAD]', 'public blog upload starting', {
-    postId: post.id,
-    photoId: photo.id,
-    publicPhotoId,
-    uriKind: isPrivateBeanPhotoUrl(uploadUri) ? 'private-bean' : uploadUri.split(':')[0],
-  });
-
-  try {
-    const query = new URLSearchParams({
-      username,
-      sourcePlaceId: post.sourcePlaceId || post.id,
-      photoId: publicPhotoId,
-      caption: photo.caption ?? '',
-    });
-    const uploadUrl = `${getApiRoot()}/blog/public-sync/photo?${query.toString()}`;
-    const contentType = photoContentType(uploadUri);
-    let payload: any;
-    if (Platform.OS !== 'web') {
-      const optimizedDataUrl = await withTimeout(
-        optimizedNativePhotoDataUrl(uploadUri, token),
-        PUBLIC_BLOG_PHOTO_PREP_TIMEOUT_MS,
-        'Preparing one of the blog photos took too long',
-      );
-      const optimizedBlob = await dataUrlToBlob(optimizedDataUrl);
-      const response = await withTimeout(
-        fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'image/jpeg',
-          },
-          body: optimizedBlob,
-        }),
-        PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
-        'Uploading one of the blog photos took too long',
-      );
-      payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.error ?? `Photo upload failed (${response.status})`);
-      }
-    } else {
-      const blob = await withTimeout(
-        readPhotoBlob(uploadUri, token),
-        PUBLIC_BLOG_PHOTO_READ_TIMEOUT_MS,
-        'Reading one of the blog photos took too long',
-      );
-      const response = await withTimeout(
-        fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': contentType,
-          },
-          body: blob,
-        }),
-        PUBLIC_BLOG_PHOTO_UPLOAD_TIMEOUT_MS,
-        'Uploading one of the blog photos took too long',
-      );
-      payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.error ?? `Photo upload failed (${response.status})`);
-      }
-    }
-    if (!payload?.success || !payload?.photo?.imageUrl) {
-      throw new Error(payload?.error ?? 'Photo upload failed');
-    }
-    console.log('[PHOTO_UPLOAD]', 'public blog upload complete', {
-      postId: post.id,
-      photoId: photo.id,
-      publicPhotoId,
-      imageUrl: payload.photo.imageUrl,
-    });
-    return {
-      ...photo,
-      id: payload.photo.id ?? publicPhotoId,
-      imageUrl: payload.photo.imageUrl,
-      compressedUrl: payload.photo.imageUrl,
-      thumbnailUrl: payload.photo.imageUrl,
-      blogImageUrl: payload.photo.imageUrl,
-      uploadStatus: 'uploaded' as const,
-    };
-  } catch (error) {
-    console.error('[PHOTO_UPLOAD_ERROR]', error, {
-      postId: post.id,
-      photoId: photo.id,
-      publicPhotoId,
-    });
-    throw error;
-  }
-}
-
 async function embedPublicBlogPhotoForSync(
   post: BlogPost,
   photo: BlogPost['photos'][number],
@@ -586,11 +486,11 @@ async function prepareBlogPostsForPublicSync(settings: TravelBlogSettings, posts
       const uploadUri = photo.blogImageUrl ?? photo.compressedUrl ?? photo.imageUrl;
       if (shouldUploadForPublicBlog(uploadUri)) {
         try {
-          const uploaded = await uploadPublicBlogPhotoForSync(settings, post, photo, uploadUri, token);
-          originalToPublicId.set(photo.id, uploaded.id);
-          photos.push(uploaded);
+          const embedded = await embedPublicBlogPhotoForSync(post, photo, uploadUri, token);
+          originalToPublicId.set(photo.id, embedded.id);
+          photos.push(embedded);
         } catch (error) {
-          console.warn('Could not prepare blog photo for upload', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
+          console.warn('Could not prepare blog photo for public sync', PUBLIC_BLOG_IMAGE_PIPELINE_VERSION, error);
           throw new Error('Could not prepare one of the blog photos. Re-add the photo and publish again.');
         }
       } else {
