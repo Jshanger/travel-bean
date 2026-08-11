@@ -1,0 +1,12 @@
+packages:
+  - bean-travel
+  - api-server
+  - lib-db
+
+catalog:
+  '@tanstack/react-query': ^5.90.12
+  '@types/node': ^24.10.1
+  drizzle-orm: ^0.45.2
+  react: 19.1.0
+  react-dom: 19.1.0
+  zod: ^4.1.13

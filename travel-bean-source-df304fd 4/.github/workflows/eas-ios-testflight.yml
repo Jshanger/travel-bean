@@ -1,0 +1,38 @@
+name: iOS TestFlight build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: eas-ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  build-and-submit:
+    name: Build and submit iOS
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.EXPO_APPLE_APP_SPECIFIC_PASSWORD }}
+    steps:
+      - name: Checkout fixed app code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install workspace dependencies
+        run: corepack pnpm install --no-frozen-lockfile
+
+      - name: Confirm commit being built
+        run: git rev-parse HEAD
+
+      - name: Build and submit to TestFlight
+        working-directory: bean-travel
+        run: corepack pnpm dlx eas-cli@20.5.0 build --platform ios --profile production --auto-submit --non-interactive

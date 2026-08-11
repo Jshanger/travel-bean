@@ -2,6 +2,7 @@ packages:
   - bean-travel
   - api-server
   - lib-db
+  - chinese-click-reader
 
 catalog:
   '@tanstack/react-query': ^5.90.12

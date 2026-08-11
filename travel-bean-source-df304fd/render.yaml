@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: travel-bean
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WEB_DIST_DIR
+        value: /app/bean-travel/dist

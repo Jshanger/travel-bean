@@ -1,0 +1,17 @@
+.git/
+.expo/
+node_modules/
+dist/
+static-build/
+web-build/
+.metro-cache/
+
+**/.DS_Store
+**/*.tsbuildinfo
+**/*.zip
+
+../.git/
+../.agents/
+../.codex/
+../*.zip
+../api-server/dist/
