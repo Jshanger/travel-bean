@@ -58,6 +58,53 @@ function r2Config() {
   };
 }
 
+export function objectStorageStatus() {
+  const hasPrivateObjectDir = Boolean(process.env.PRIVATE_OBJECT_DIR);
+  const hasEndpoint = Boolean(process.env.R2_ENDPOINT || process.env.R2_ACCOUNT_ID);
+  const missing = [
+    hasEndpoint ? null : "R2_ENDPOINT or R2_ACCOUNT_ID",
+    process.env.R2_BUCKET_NAME ? null : "R2_BUCKET_NAME",
+    process.env.R2_ACCESS_KEY_ID ? null : "R2_ACCESS_KEY_ID",
+    process.env.R2_SECRET_ACCESS_KEY ? null : "R2_SECRET_ACCESS_KEY",
+  ].filter(Boolean) as string[];
+  const hasAnyR2Value = Boolean(
+    process.env.R2_ENDPOINT ||
+    process.env.R2_ACCOUNT_ID ||
+    process.env.R2_BUCKET_NAME ||
+    process.env.R2_ACCESS_KEY_ID ||
+    process.env.R2_SECRET_ACCESS_KEY
+  );
+
+  if (isR2Configured()) {
+    return {
+      provider: "r2",
+      configured: true,
+      missing: [],
+      publicUrlConfigured: Boolean(process.env.R2_PUBLIC_URL),
+      endpointSource: process.env.R2_ENDPOINT ? "R2_ENDPOINT" : "R2_ACCOUNT_ID",
+    };
+  }
+
+  if (hasAnyR2Value) {
+    return {
+      provider: "r2",
+      configured: false,
+      missing,
+      publicUrlConfigured: Boolean(process.env.R2_PUBLIC_URL),
+      endpointSource: process.env.R2_ENDPOINT ? "R2_ENDPOINT" : process.env.R2_ACCOUNT_ID ? "R2_ACCOUNT_ID" : "missing",
+      fallbackProvider: hasPrivateObjectDir ? "gcs-sidecar" : "none",
+    };
+  }
+
+  return {
+    provider: hasPrivateObjectDir ? "gcs-sidecar" : "none",
+    configured: hasPrivateObjectDir,
+    missing: hasPrivateObjectDir ? [] : ["R2_BUCKET_NAME", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_ACCOUNT_ID"],
+    publicUrlConfigured: false,
+    endpointSource: "missing",
+  };
+}
+
 export function isR2Configured() {
   return Boolean(r2Config());
 }
