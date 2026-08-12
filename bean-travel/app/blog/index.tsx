@@ -23,7 +23,7 @@ function dashboardUrl() {
   const domain = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '');
   if (domain) return `https://${domain}/dashboard`;
   if (typeof window !== 'undefined' && window.location?.origin) return `${window.location.origin}/dashboard`;
-  return 'https://travel-bean-production.up.railway.app/dashboard';
+  return '/dashboard';
 }
 
 function dashboardEmailBody(url = dashboardUrl()) {

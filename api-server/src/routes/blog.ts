@@ -175,7 +175,7 @@ function ensurePublicPhotoStorageConfigured() {
   if (isPublicPhotoStorageConfigured()) return;
   throw new PublicSyncUploadError(
     503,
-    "Object storage is not configured. Set R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ACCOUNT_ID or R2_ENDPOINT in Railway before publishing blog photos.",
+    "Object storage is not configured. Set R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, and R2_ACCOUNT_ID or R2_ENDPOINT before publishing blog photos.",
   );
 }
 
@@ -183,7 +183,7 @@ function inlinePublicImageUrl(upload: { buffer: Buffer; contentType: string }) {
   if (upload.buffer.length > MAX_INLINE_PUBLIC_IMAGE_BYTES) {
     throw new PublicSyncUploadError(
       503,
-      "Object storage is not configured and this photo is too large for the temporary inline publish path. Please set the R2_* variables in Railway.",
+      "Object storage is not configured and this photo is too large for the temporary inline publish path. Please set the R2_* variables on the deployed API service.",
     );
   }
   return `data:${upload.contentType};base64,${upload.buffer.toString("base64")}`;
@@ -485,7 +485,11 @@ function dashboardUrl() {
   const configured =
     process.env.DASHBOARD_URL ??
     (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN.replace(/^https?:\/\//, "")}/dashboard` : undefined);
-  return configured ?? "https://travel-bean-production.up.railway.app/dashboard";
+  const host =
+    process.env.EXPO_PUBLIC_DOMAIN ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+  return host ? `https://${host.replace(/^https?:\/\//, "").replace(/\/+$/, "")}/dashboard` : "/dashboard";
 }
 
 function dashboardEmailBody() {

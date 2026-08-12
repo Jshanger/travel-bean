@@ -119,7 +119,13 @@ function sanitizeBlogUsername(value: string) {
 }
 
 function requestOrigin(req: express.Request) {
-  const host = req.get("x-forwarded-host") ?? req.get("host") ?? "travel-bean-production.up.railway.app";
+  const host =
+    req.get("x-forwarded-host") ??
+    req.get("host") ??
+    process.env.EXPO_PUBLIC_DOMAIN ??
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL ??
+    "localhost:3000";
   const proto = req.get("x-forwarded-proto") ?? req.protocol ?? "https";
   return `${proto}://${host}`;
 }

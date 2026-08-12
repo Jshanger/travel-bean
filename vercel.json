@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "corepack enable && corepack pnpm install --no-frozen-lockfile && corepack pnpm run build:deploy",
+  "outputDirectory": "bean-travel/dist",
+  "functions": {
+    "api/index.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "bean-travel/dist/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/@:username/:slug",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/@:username",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/((?!_expo|assets|favicon.ico|manifest.json|robots.txt).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
